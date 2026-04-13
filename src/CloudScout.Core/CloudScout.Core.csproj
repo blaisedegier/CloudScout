@@ -10,6 +10,12 @@
     <EmbeddedResource Include="Taxonomy\Taxonomies\*.json" />
   </ItemGroup>
 
+  <!-- Expose internals to the test project so tests can target small helpers (e.g. word-boundary
+       matching) without inflating the public API surface. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="CloudScout.Core.Tests" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="DocumentFormat.OpenXml" Version="3.5.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.5" />
