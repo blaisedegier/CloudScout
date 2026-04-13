@@ -18,8 +18,7 @@ namespace CloudScout.Core.Persistence.Migrations
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Provider = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
                     AccountIdentifier = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
-                    EncryptedRefreshToken = table.Column<byte[]>(type: "BLOB", nullable: false),
-                    TokenExpiresUtc = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    HomeAccountId = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
                     ConnectedUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
                     LastUsedUtc = table.Column<DateTime>(type: "TEXT", nullable: true),
                     Status = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false)
@@ -105,6 +104,11 @@ namespace CloudScout.Core.Persistence.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CloudConnections_HomeAccountId",
+                table: "CloudConnections",
+                column: "HomeAccountId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CloudConnections_Provider_AccountIdentifier",

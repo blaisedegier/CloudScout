@@ -13,10 +13,11 @@ internal sealed class CloudConnectionConfiguration : IEntityTypeConfiguration<Cl
 
         builder.Property(x => x.Provider).HasMaxLength(50).IsRequired();
         builder.Property(x => x.AccountIdentifier).HasMaxLength(256).IsRequired();
+        builder.Property(x => x.HomeAccountId).HasMaxLength(256).IsRequired();
         builder.Property(x => x.Status).HasMaxLength(20).IsRequired();
-        builder.Property(x => x.EncryptedRefreshToken).IsRequired();
 
         builder.HasIndex(x => new { x.Provider, x.AccountIdentifier }).IsUnique();
+        builder.HasIndex(x => x.HomeAccountId);
         builder.HasIndex(x => x.Status);
     }
 }

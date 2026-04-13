@@ -1,8 +1,9 @@
 namespace CloudScout.Core.Persistence.Entities;
 
 /// <summary>
-/// An authenticated connection to a cloud storage provider. Stores the encrypted
-/// refresh token required to re-acquire access tokens without prompting the user.
+/// An authenticated connection to a cloud storage provider. Identifies which account
+/// to use from the MSAL token cache; the actual encrypted token material lives in the
+/// cache file managed by <c>Microsoft.Identity.Client.Extensions.Msal</c>.
 /// </summary>
 public class CloudConnection
 {
@@ -18,13 +19,11 @@ public class CloudConnection
     public string AccountIdentifier { get; set; } = string.Empty;
 
     /// <summary>
-    /// Refresh token encrypted at rest via <see cref="System.Security.Cryptography.ProtectedData"/> (DPAPI, Windows-scoped).
-    /// Never persisted in plaintext. Rotated automatically when the provider issues a new refresh token.
+    /// MSAL <c>IAccount.HomeAccountId.Identifier</c> — the stable identifier used to retrieve
+    /// the correct account from the encrypted MSAL token cache on subsequent runs. Never
+    /// sensitive on its own; the actual tokens live in the OS-encrypted cache file.
     /// </summary>
-    public byte[] EncryptedRefreshToken { get; set; } = Array.Empty<byte>();
-
-    /// <summary>When the most recently issued access token expires. Informational only — refresh is always attempted on use.</summary>
-    public DateTime? TokenExpiresUtc { get; set; }
+    public string HomeAccountId { get; set; } = string.Empty;
 
     public DateTime ConnectedUtc { get; set; } = DateTime.UtcNow;
 

@@ -31,9 +31,10 @@ namespace CloudScout.Core.Persistence.Migrations
                     b.Property<DateTime>("ConnectedUtc")
                         .HasColumnType("TEXT");
 
-                    b.Property<byte[]>("EncryptedRefreshToken")
+                    b.Property<string>("HomeAccountId")
                         .IsRequired()
-                        .HasColumnType("BLOB");
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("LastUsedUtc")
                         .HasColumnType("TEXT");
@@ -48,10 +49,9 @@ namespace CloudScout.Core.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("TokenExpiresUtc")
-                        .HasColumnType("TEXT");
-
                     b.HasKey("Id");
+
+                    b.HasIndex("HomeAccountId");
 
                     b.HasIndex("Status");
 
