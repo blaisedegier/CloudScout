@@ -1,43 +1,67 @@
+using CloudScout.Core.Classification;
+using CloudScout.Core.Classification.Extraction;
 using CloudScout.Core.Crawling;
 using CloudScout.Core.Persistence;
 using CloudScout.Core.Persistence.Entities;
+using CloudScout.Core.Taxonomy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace CloudScout.Core.Services;
 
 /// <summary>
-/// Coordinates a full scan run: resolves the connection, drives the crawler, persists
-/// <see cref="CrawledFile"/> rows in batches, and keeps the owning <see cref="ScanSession"/>
-/// row up to date so the scan can be resumed after an interruption.
+/// Coordinates a full scan run: resolves the connection, drives the crawler, classifies each
+/// discovered file, and keeps the owning <see cref="ScanSession"/> row up to date so an
+/// interrupted scan can be resumed.
 ///
-/// Classification is intentionally out of scope here for Phase A — the orchestrator produces
-/// the raw file set that the classification pipeline will later consume.
+/// The scan runs in two phases:
+///   1. <b>Crawl</b> — enumerate every file via <see cref="ICloudStorageProvider"/> and persist
+///      metadata-only <see cref="CrawledFile"/> rows in batches. Cheap; proceeds without
+///      touching file content.
+///   2. <b>Classify</b> — for each crawled file, run Tier 0 (metadata heuristics). If Tier 0
+///      is below the high-confidence threshold *and* a text extractor exists for the file type,
+///      download the content, extract text, and run Tier 1. Persist the top-N
+///      <see cref="FileSuggestion"/> candidates. Tier 3 (LLM) is not wired up in Phase B.
 /// </summary>
 public sealed class ScanOrchestrator
 {
-    // Number of CrawledFile rows accumulated before flushing to the DB. Chosen to keep memory
-    // bounded on large drives while minimising round-trips; adjust if SQLite becomes a bottleneck.
-    private const int PersistBatchSize = 50;
+    // Number of CrawledFile rows accumulated before flushing — bounded memory on large drives.
+    private const int CrawlPersistBatchSize = 50;
+
+    // FileSuggestion rows accumulate faster (up to 3 per file). Flush more often so the DB
+    // reflects progress for a UI watching the session rows.
+    private const int ClassifyPersistEveryNFiles = 10;
+
+    // Tier 0 confidence above which we skip Tier 1. At 0.7 a single strong filename+folder
+    // match (e.g. /Car/COR.pdf → vehicle.registration) short-circuits without a download.
+    private const double HighConfidenceThreshold = 0.7;
+
+    // Keep only the top N suggestions per file. More than 3 is noise; fewer drops nuance.
+    private const int MaxSuggestionsPerFile = 3;
 
     private readonly CloudScoutDbContext _db;
     private readonly IEnumerable<ICloudStorageProvider> _providers;
+    private readonly ClassificationPipeline _pipeline;
+    private readonly TextExtractionService _textExtraction;
+    private readonly ITaxonomyProvider _taxonomyProvider;
     private readonly ILogger<ScanOrchestrator> _logger;
 
     public ScanOrchestrator(
         CloudScoutDbContext db,
         IEnumerable<ICloudStorageProvider> providers,
+        ClassificationPipeline pipeline,
+        TextExtractionService textExtraction,
+        ITaxonomyProvider taxonomyProvider,
         ILogger<ScanOrchestrator> logger)
     {
         _db = db;
         _providers = providers;
+        _pipeline = pipeline;
+        _textExtraction = textExtraction;
+        _taxonomyProvider = taxonomyProvider;
         _logger = logger;
     }
 
-    /// <summary>
-    /// Runs a complete scan for <paramref name="connectionId"/>. If an incomplete session for that
-    /// connection exists, it is resumed; otherwise a new session is created.
-    /// </summary>
     public async Task<ScanSession> RunScanAsync(
         Guid connectionId,
         string taxonomyName,
@@ -51,20 +75,23 @@ public sealed class ScanOrchestrator
             string.Equals(p.ProviderName, connection.Provider, StringComparison.OrdinalIgnoreCase))
             ?? throw new InvalidOperationException($"No registered ICloudStorageProvider for '{connection.Provider}'.");
 
+        // Fail fast if the taxonomy doesn't resolve — no point crawling otherwise.
+        var taxonomy = await _taxonomyProvider.GetAsync(taxonomyName, cancellationToken);
+
         var session = await GetOrCreateSessionAsync(connection, taxonomyName, cancellationToken);
 
         try
         {
             await CrawlAndPersistAsync(provider, session, connection, onProgress, cancellationToken);
+            await ClassifyCrawledFilesAsync(provider, session, connection, taxonomy, onProgress, cancellationToken);
 
             session.Status = ScanStatus.Completed;
             session.CompletedUtc = DateTime.UtcNow;
             await _db.SaveChangesAsync(cancellationToken);
+            await ReportProgressAsync(onProgress, session, currentPath: null, ScanPhase.Completed);
 
-            await ReportProgressAsync(onProgress, session, currentPath: null, ScanPhase.Completed, cancellationToken);
-
-            _logger.LogInformation("Scan {SessionId} completed: {FileCount} files discovered",
-                session.Id, session.TotalFilesFound);
+            _logger.LogInformation("Scan {SessionId} completed: {FileCount} files, {ClassifiedCount} classified",
+                session.Id, session.TotalFilesFound, session.ClassifiedCount);
         }
         catch (OperationCanceledException)
         {
@@ -79,7 +106,7 @@ public sealed class ScanOrchestrator
             session.ErrorMessage = ex.Message;
             session.CompletedUtc = DateTime.UtcNow;
             await _db.SaveChangesAsync(CancellationToken.None);
-            await ReportProgressAsync(onProgress, session, currentPath: null, ScanPhase.Failed, CancellationToken.None);
+            await ReportProgressAsync(onProgress, session, currentPath: null, ScanPhase.Failed);
             _logger.LogError(ex, "Scan {SessionId} failed", session.Id);
             throw;
         }
@@ -87,12 +114,13 @@ public sealed class ScanOrchestrator
         return session;
     }
 
+    // ---- Phase 1: Crawl ----------------------------------------------------------------------
+
     private async Task<ScanSession> GetOrCreateSessionAsync(
         CloudConnection connection,
         string taxonomyName,
         CancellationToken ct)
     {
-        // Resume a Running session for this connection if one exists, otherwise create fresh.
         var existing = await _db.ScanSessions
             .Where(s => s.ConnectionId == connection.Id && s.Status == ScanStatus.Running)
             .OrderByDescending(s => s.StartedUtc)
@@ -123,7 +151,7 @@ public sealed class ScanOrchestrator
         Func<ScanProgress, Task>? onProgress,
         CancellationToken ct)
     {
-        var batch = new List<CrawledFile>(PersistBatchSize);
+        var batch = new List<CrawledFile>(CrawlPersistBatchSize);
 
         await foreach (var file in provider.EnumerateFilesAsync(connection.HomeAccountId, session.LastProcessedExternalPath, ct)
                                            .ConfigureAwait(false))
@@ -144,17 +172,17 @@ public sealed class ScanOrchestrator
             session.TotalFilesFound++;
             session.LastProcessedExternalPath = file.ExternalPath;
 
-            if (batch.Count >= PersistBatchSize)
+            if (batch.Count >= CrawlPersistBatchSize)
             {
                 await FlushBatchAsync(batch, ct);
-                await ReportProgressAsync(onProgress, session, file.ExternalPath, ScanPhase.Crawling, ct);
+                await ReportProgressAsync(onProgress, session, file.ExternalPath, ScanPhase.Crawling);
             }
         }
 
         if (batch.Count > 0)
         {
             await FlushBatchAsync(batch, ct);
-            await ReportProgressAsync(onProgress, session, session.LastProcessedExternalPath, ScanPhase.Crawling, ct);
+            await ReportProgressAsync(onProgress, session, session.LastProcessedExternalPath, ScanPhase.Crawling);
         }
 
         connection.LastUsedUtc = DateTime.UtcNow;
@@ -167,12 +195,117 @@ public sealed class ScanOrchestrator
         batch.Clear();
     }
 
+    // ---- Phase 2: Classify -------------------------------------------------------------------
+
+    private async Task ClassifyCrawledFilesAsync(
+        ICloudStorageProvider provider,
+        ScanSession session,
+        CloudConnection connection,
+        TaxonomyDefinition taxonomy,
+        Func<ScanProgress, Task>? onProgress,
+        CancellationToken ct)
+    {
+        // Files in this session that haven't yet produced any suggestions. Using the relation
+        // (Suggestions navigation) keeps the query correct across resumed runs — previously
+        // classified files are skipped automatically.
+        var filesToClassify = await _db.CrawledFiles
+            .Where(f => f.SessionId == session.Id && !f.Suggestions.Any())
+            .OrderBy(f => f.ExternalPath)
+            .ToListAsync(ct);
+
+        if (filesToClassify.Count == 0) return;
+
+        _logger.LogInformation("Classifying {Count} files for scan {SessionId}", filesToClassify.Count, session.Id);
+
+        var processedSinceFlush = 0;
+        foreach (var file in filesToClassify)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var candidates = await ClassifyFileAsync(provider, connection, file, taxonomy, ct);
+
+            foreach (var candidate in candidates.OrderByDescending(c => c.ConfidenceScore).Take(MaxSuggestionsPerFile))
+            {
+                _db.FileSuggestions.Add(new FileSuggestion
+                {
+                    FileId = file.Id,
+                    SuggestedCategoryId = candidate.CategoryId,
+                    ConfidenceScore = candidate.ConfidenceScore,
+                    ClassificationTier = candidate.Tier,
+                    ClassificationReason = candidate.Reason,
+                });
+            }
+
+            session.ClassifiedCount++;
+            processedSinceFlush++;
+
+            if (processedSinceFlush >= ClassifyPersistEveryNFiles)
+            {
+                await _db.SaveChangesAsync(ct);
+                processedSinceFlush = 0;
+                await ReportProgressAsync(onProgress, session, file.ExternalPath, ScanPhase.Classifying);
+            }
+        }
+
+        if (processedSinceFlush > 0)
+            await _db.SaveChangesAsync(ct);
+    }
+
+    private async Task<IReadOnlyList<ClassificationResult>> ClassifyFileAsync(
+        ICloudStorageProvider provider,
+        CloudConnection connection,
+        CrawledFile file,
+        TaxonomyDefinition taxonomy,
+        CancellationToken ct)
+    {
+        var context = new ClassificationContext
+        {
+            FileName = file.FileName,
+            ParentFolderPath = file.ParentFolderPath,
+            FullPath = file.ExternalPath,
+            MimeType = file.MimeType,
+            SizeBytes = file.SizeBytes,
+        };
+
+        // Tier 0 is cheap — always run it.
+        var tier0Results = await _pipeline.RunTierAsync(0, context, taxonomy, ct);
+        var tier0Max = tier0Results.FirstOrDefault()?.ConfidenceScore ?? 0;
+
+        var allResults = new List<ClassificationResult>(tier0Results);
+
+        // Tier 1 needs extracted text. Only download if (a) there's room to improve on Tier 0
+        // and (b) we have an extractor that knows the file type. Both guards save bandwidth.
+        var worthExtracting = tier0Max < HighConfidenceThreshold
+                              && _textExtraction.HasExtractorFor(file.MimeType, file.FileName);
+        if (!worthExtracting) return allResults;
+
+        try
+        {
+            await using var stream = await provider.DownloadAsync(connection.HomeAccountId, file.ExternalFileId, ct);
+            var text = await _textExtraction.ExtractAsync(stream, file.MimeType, file.FileName, cancellationToken: ct);
+            if (string.IsNullOrWhiteSpace(text)) return allResults;
+
+            context.ExtractedText = text;
+            var tier1Results = await _pipeline.RunTierAsync(1, context, taxonomy, ct);
+            allResults.AddRange(tier1Results);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // One file failing to download or extract shouldn't abort the scan — keep the Tier 0
+            // result and move on. The warning is enough to investigate later.
+            _logger.LogWarning(ex, "Tier 1 content fetch/extract failed for {Path}; using Tier 0 result only", file.ExternalPath);
+        }
+
+        return allResults;
+    }
+
+    // ---- Progress reporting ------------------------------------------------------------------
+
     private static Task ReportProgressAsync(
         Func<ScanProgress, Task>? onProgress,
         ScanSession session,
         string? currentPath,
-        string phase,
-        CancellationToken ct)
+        string phase)
     {
         if (onProgress is null) return Task.CompletedTask;
         var progress = new ScanProgress(session.Id, session.TotalFilesFound, session.ClassifiedCount, currentPath, phase);

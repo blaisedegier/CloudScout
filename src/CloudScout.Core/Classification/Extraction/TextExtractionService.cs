@@ -27,6 +27,13 @@ public sealed class TextExtractionService
     }
 
     /// <summary>
+    /// Returns true if at least one registered extractor claims to handle this file. Lets the
+    /// orchestrator avoid downloading files it has no way to read text from.
+    /// </summary>
+    public bool HasExtractorFor(string? mimeType, string fileName) =>
+        _extractors.Any(e => e.CanHandle(mimeType, fileName));
+
+    /// <summary>
     /// Extract text from <paramref name="content"/>, or null if no registered extractor
     /// matches the file type. The caller owns and disposes the stream.
     /// </summary>

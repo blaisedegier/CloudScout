@@ -1,7 +1,9 @@
 using CloudScout.Cli.Commands;
+using CloudScout.Core.Classification;
 using CloudScout.Core.Crawling;
 using CloudScout.Core.Persistence;
 using CloudScout.Core.Services;
+using CloudScout.Core.Taxonomy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -41,6 +43,8 @@ try
     builder.Services.AddSerilog();
 
     builder.Services.AddCloudScoutCrawling(builder.Configuration);
+    builder.Services.AddCloudScoutTaxonomy();
+    builder.Services.AddCloudScoutClassification();
     builder.Services.AddCloudScoutServices(builder.Configuration);
 
     using var host = builder.Build();
