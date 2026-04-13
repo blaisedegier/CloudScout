@@ -6,9 +6,6 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <!-- Built-in taxonomy definitions ship as embedded resources so a compiled Core DLL is
-       self-contained. User-supplied taxonomies can still be loaded from arbitrary file paths
-       via JsonTaxonomyLoader.LoadFromFileAsync. -->
   <ItemGroup>
     <EmbeddedResource Include="Taxonomy\Taxonomies\*.json" />
   </ItemGroup>

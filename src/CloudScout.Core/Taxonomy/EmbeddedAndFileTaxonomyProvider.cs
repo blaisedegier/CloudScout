@@ -15,7 +15,7 @@ public sealed class EmbeddedAndFileTaxonomyProvider : ITaxonomyProvider
     // Matches the folder structure in Core and the csproj <EmbeddedResource Include> glob.
     private const string EmbeddedResourcePrefix = "CloudScout.Core.Taxonomy.Taxonomies.";
 
-    private readonly ConcurrentDictionary<string, Taxonomy> _cache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, TaxonomyDefinition> _cache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Assembly _resourceAssembly;
 
     public EmbeddedAndFileTaxonomyProvider() : this(typeof(EmbeddedAndFileTaxonomyProvider).Assembly)
@@ -28,7 +28,7 @@ public sealed class EmbeddedAndFileTaxonomyProvider : ITaxonomyProvider
         _resourceAssembly = resourceAssembly;
     }
 
-    public async Task<Taxonomy> GetAsync(string nameOrPath, CancellationToken cancellationToken = default)
+    public async Task<TaxonomyDefinition> GetAsync(string nameOrPath, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(nameOrPath))
             throw new ArgumentException("Taxonomy name or path is required.", nameof(nameOrPath));
@@ -41,7 +41,7 @@ public sealed class EmbeddedAndFileTaxonomyProvider : ITaxonomyProvider
         return taxonomy;
     }
 
-    private async Task<Taxonomy> LoadAsync(string nameOrPath, CancellationToken ct)
+    private async Task<TaxonomyDefinition> LoadAsync(string nameOrPath, CancellationToken ct)
     {
         // Try embedded resource first — short, well-known names like "generic-default" resolve here.
         var resourceName = $"{EmbeddedResourcePrefix}{nameOrPath}.json";

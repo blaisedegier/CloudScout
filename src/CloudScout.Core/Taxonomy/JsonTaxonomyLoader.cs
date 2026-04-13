@@ -18,7 +18,7 @@ public static class JsonTaxonomyLoader
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    public static async Task<Taxonomy> LoadFromFileAsync(string path, CancellationToken cancellationToken = default)
+    public static async Task<TaxonomyDefinition> LoadFromFileAsync(string path, CancellationToken cancellationToken = default)
     {
         if (!File.Exists(path))
             throw new FileNotFoundException($"Taxonomy file not found: {path}", path);
@@ -27,7 +27,7 @@ public static class JsonTaxonomyLoader
         return await LoadFromStreamAsync(stream, path, cancellationToken).ConfigureAwait(false);
     }
 
-    public static async Task<Taxonomy> LoadFromStreamAsync(Stream stream, string sourceLabel, CancellationToken cancellationToken = default)
+    public static async Task<TaxonomyDefinition> LoadFromStreamAsync(Stream stream, string sourceLabel, CancellationToken cancellationToken = default)
     {
         TaxonomyDocument? document;
         try
@@ -45,7 +45,7 @@ public static class JsonTaxonomyLoader
         Validate(document, sourceLabel);
 
         var categories = document.Categories!.Select(ToCategory).ToList();
-        return new Taxonomy(document.Name!, document.Version!, categories);
+        return new TaxonomyDefinition(document.Name!, document.Version!, categories);
     }
 
     private static TaxonomyCategory ToCategory(CategoryDocument source) => new()

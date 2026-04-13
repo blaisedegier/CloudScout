@@ -7,5 +7,5 @@ namespace CloudScout.Core.Taxonomy;
 /// </summary>
 public interface ITaxonomyProvider
 {
-    Task<Taxonomy> GetAsync(string nameOrPath, CancellationToken cancellationToken = default);
+    Task<TaxonomyDefinition> GetAsync(string nameOrPath, CancellationToken cancellationToken = default);
 }
