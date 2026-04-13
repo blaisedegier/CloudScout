@@ -73,8 +73,8 @@
       "parentId": "financial",
       "filenameKeywords": ["payslip", "pay slip", "salary", "wage"],
       "folderKeywords": ["payslip", "payslips", "pay slips", "salary"],
-      "contentKeywords": ["gross pay", "net pay", "paye", "nic", "earnings", "deductions", "year to date"],
-      "contentPhrases": ["pay period", "gross salary", "employer contribution"],
+      "contentKeywords": ["paye", "uif", "sdl", "nic", "earnings", "deduction", "deductions", "payslip"],
+      "contentPhrases": ["basic salary", "gross pay", "net pay", "nett pay", "pay period", "year to date", "employer contribution", "employee name", "tax code"],
       "mimeTypes": ["application/pdf"],
       "baseConfidence": 0.88
     },
@@ -266,8 +266,8 @@
       "parentId": "vehicle",
       "filenameKeywords": ["condition", "odometer", "log book"],
       "folderKeywords": ["car", "vehicle", "motor"],
-      "contentKeywords": ["vin", "make", "model", "odometer", "mileage", "purchase price"],
-      "contentPhrases": ["condition report", "bill of sale"],
+      "contentKeywords": ["vin", "odometer", "mileage"],
+      "contentPhrases": ["make and model", "purchase price", "condition report", "bill of sale"],
       "mimeTypes": ["application/pdf"],
       "baseConfidence": 0.78
     },
