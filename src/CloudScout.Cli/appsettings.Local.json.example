@@ -1,0 +1,9 @@
+{
+  "_comment": "Copy this file to appsettings.Local.json (which is gitignored) and fill in the ClientId from your Entra ID app registration. See docs/setup.md for the walkthrough.",
+  "Authentication": {
+    "Microsoft": {
+      "ClientId": "YOUR-APPLICATION-CLIENT-ID-HERE",
+      "TenantId": "common"
+    }
+  }
+}
