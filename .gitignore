@@ -1,0 +1,55 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+.vscode/
+.idea/
+
+# Rider
+*.DotSettings.user
+
+# NuGet
+*.nupkg
+.nuget/
+
+# Secrets & local config
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+.env
+.env.*
+
+# Local database
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Local LLM model files (too large for git)
+models/*.gguf
+models/*.bin
+models/*.safetensors
+!models/.gitkeep
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Test results
+[Tt]est[Rr]esult*/
+coverage/
+*.coverage
+*.coveragexml
