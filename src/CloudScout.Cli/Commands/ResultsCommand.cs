@@ -74,7 +74,10 @@ public static class ResultsCommand
 
         foreach (var folderGroup in folders.GroupBy(f => f.ParentFolderPath))
         {
-            Console.WriteLine($"  {folderGroup.Key}/");
+            // Root folder arrives as "/"; every other folder lacks a trailing slash.
+            // Append one only when needed so the root doesn't render as "//".
+            var header = folderGroup.Key == "/" ? "/" : $"{folderGroup.Key}/";
+            Console.WriteLine($"  {header}");
             foreach (var file in folderGroup.Take(limit))
                 Console.WriteLine($"    {file.FileName}  ({FormatSize(file.SizeBytes)})");
             var overflow = folderGroup.Count() - limit;
