@@ -1,0 +1,308 @@
+{
+  "name": "Generic Documents",
+  "version": "1.0.0",
+  "categories": [
+    { "id": "financial", "displayName": "Financial", "baseConfidence": 0.5 },
+    { "id": "legal", "displayName": "Legal", "baseConfidence": 0.5 },
+    { "id": "identity", "displayName": "Identity", "baseConfidence": 0.6 },
+    { "id": "medical", "displayName": "Medical", "baseConfidence": 0.5 },
+    { "id": "academic", "displayName": "Academic", "baseConfidence": 0.5 },
+    { "id": "vehicle", "displayName": "Vehicle", "baseConfidence": 0.6 },
+    { "id": "personal", "displayName": "Personal Memories", "baseConfidence": 0.4 },
+    { "id": "reference", "displayName": "Reference / Manuals", "baseConfidence": 0.3 },
+
+    {
+      "id": "financial.banking",
+      "displayName": "Banking Statements",
+      "parentId": "financial",
+      "filenameKeywords": ["statement", "bank"],
+      "folderKeywords": ["bank", "banking", "statements"],
+      "contentKeywords": ["account number", "iban", "sort code", "routing number", "swift", "bic"],
+      "contentPhrases": ["account statement", "statement of account", "closing balance", "opening balance"],
+      "negativeKeywords": ["personal statement", "mission statement"],
+      "mimeTypes": ["application/pdf"],
+      "baseConfidence": 0.88
+    },
+    {
+      "id": "financial.taxes",
+      "displayName": "Tax Documents",
+      "parentId": "financial",
+      "filenameKeywords": ["tax", "vat", "return", "hmrc", "irs", "sars", "p60", "p45"],
+      "folderKeywords": ["tax", "taxes"],
+      "contentKeywords": ["taxable income", "tax return", "tax year", "deductions", "paye"],
+      "contentPhrases": ["income tax return", "self assessment", "tax year ending"],
+      "mimeTypes": ["application/pdf"],
+      "baseConfidence": 0.85
+    },
+    {
+      "id": "financial.investments",
+      "displayName": "Investments",
+      "parentId": "financial",
+      "filenameKeywords": ["portfolio", "investment", "brokerage", "dividend", "stocks", "shares"],
+      "folderKeywords": ["investment", "investments", "portfolio"],
+      "contentKeywords": ["portfolio", "dividend", "capital gains", "shares held", "isin"],
+      "contentPhrases": ["investment portfolio", "dividend statement"],
+      "mimeTypes": ["application/pdf"],
+      "baseConfidence": 0.8
+    },
+    {
+      "id": "financial.insurance",
+      "displayName": "Insurance",
+      "parentId": "financial",
+      "filenameKeywords": ["insurance", "policy", "premium"],
+      "folderKeywords": ["insurance", "insurance policies"],
+      "contentKeywords": ["policy number", "premium", "policyholder", "beneficiary", "coverage", "insured"],
+      "contentPhrases": ["insurance policy", "policy schedule"],
+      "mimeTypes": ["application/pdf"],
+      "baseConfidence": 0.82
+    },
+    {
+      "id": "financial.receipts-invoices",
+      "displayName": "Receipts & Invoices",
+      "parentId": "financial",
+      "filenameKeywords": ["invoice", "receipt", "bill"],
+      "folderKeywords": ["invoices", "receipts", "bills"],
+      "contentKeywords": ["invoice number", "total due", "amount payable", "vat number", "subtotal"],
+      "contentPhrases": ["tax invoice", "invoice date", "payment due"],
+      "mimeTypes": ["application/pdf"],
+      "baseConfidence": 0.78
+    },
+    {
+      "id": "financial.payslips",
+      "displayName": "Payslips",
+      "parentId": "financial",
+      "filenameKeywords": ["payslip", "pay slip", "salary", "wage"],
+      "folderKeywords": ["payslip", "payslips", "pay slips", "salary"],
+      "contentKeywords": ["gross pay", "net pay", "paye", "nic", "earnings", "deductions", "year to date"],
+      "contentPhrases": ["pay period", "gross salary", "employer contribution"],
+      "mimeTypes": ["application/pdf"],
+      "baseConfidence": 0.88
+    },
+    {
+      "id": "financial.loans-credit",
+      "displayName": "Loans & Credit",
+      "parentId": "financial",
+      "filenameKeywords": ["loan", "mortgage", "credit card", "credit"],
+      "folderKeywords": ["loan", "loans", "mortgage", "credit"],
+      "contentKeywords": ["principal", "interest rate", "loan amount", "repayment schedule", "apr"],
+      "contentPhrases": ["loan agreement", "credit agreement", "mortgage statement"],
+      "mimeTypes": ["application/pdf"],
+      "baseConfidence": 0.82
+    },
+
+    {
+      "id": "legal.wills-estates",
+      "displayName": "Wills & Estate Planning",
+      "parentId": "legal",
+      "filenameKeywords": ["will", "testament", "estate", "executor", "probate"],
+      "folderKeywords": ["will", "estate", "probate"],
+      "contentKeywords": ["last will", "testator", "executor", "beneficiary", "estate"],
+      "contentPhrases": ["last will and testament", "being of sound mind", "hereby revoke"],
+      "mimeTypes": ["application/pdf"],
+      "baseConfidence": 0.92
+    },
+    {
+      "id": "legal.contracts",
+      "displayName": "Contracts & Agreements",
+      "parentId": "legal",
+      "filenameKeywords": ["contract", "agreement", "terms", "nda"],
+      "folderKeywords": ["contracts", "agreements"],
+      "contentKeywords": ["party of the first part", "hereinafter", "in witness whereof", "effective date"],
+      "contentPhrases": ["this agreement is made", "terms and conditions", "governed by the laws"],
+      "mimeTypes": ["application/pdf"],
+      "baseConfidence": 0.8
+    },
+    {
+      "id": "legal.employment",
+      "displayName": "Employment Contracts",
+      "parentId": "legal",
+      "filenameKeywords": ["employment", "offer letter", "contract"],
+      "folderKeywords": ["employment", "hr", "work"],
+      "contentKeywords": ["employee", "employer", "job title", "salary", "notice period", "probation"],
+      "contentPhrases": ["contract of employment", "terms of employment", "offer of employment"],
+      "mimeTypes": ["application/pdf"],
+      "baseConfidence": 0.85
+    },
+    {
+      "id": "legal.court-documents",
+      "displayName": "Court Documents",
+      "parentId": "legal",
+      "filenameKeywords": ["court", "summons", "affidavit", "subpoena", "petition"],
+      "folderKeywords": ["court", "legal", "litigation"],
+      "contentKeywords": ["case number", "plaintiff", "defendant", "court order", "judgment"],
+      "contentPhrases": ["in the matter of", "case no"],
+      "mimeTypes": ["application/pdf"],
+      "baseConfidence": 0.85
+    },
+
+    {
+      "id": "identity.passport",
+      "displayName": "Passport",
+      "parentId": "identity",
+      "filenameKeywords": ["passport"],
+      "folderKeywords": ["passport", "identity", "id"],
+      "contentKeywords": ["passport number", "place of birth", "nationality", "authority"],
+      "contentPhrases": ["passport no", "date of expiry"],
+      "negativeKeywords": ["password"],
+      "mimeTypes": ["application/pdf", "image/jpeg", "image/png"],
+      "baseConfidence": 0.9
+    },
+    {
+      "id": "identity.national-id",
+      "displayName": "National ID",
+      "parentId": "identity",
+      "filenameKeywords": ["id card", "national id", "identity card", "social security", "ssn", "nin", "id"],
+      "folderKeywords": ["identity", "id"],
+      "contentKeywords": ["identity number", "national insurance", "social security number"],
+      "contentPhrases": ["identity document", "identity card"],
+      "mimeTypes": ["application/pdf", "image/jpeg", "image/png"],
+      "baseConfidence": 0.82
+    },
+    {
+      "id": "identity.drivers-license",
+      "displayName": "Driver's License",
+      "parentId": "identity",
+      "filenameKeywords": ["driver", "drivers", "licence", "license", "dvla"],
+      "folderKeywords": ["identity", "id", "driving"],
+      "contentKeywords": ["driver licence", "dvla", "licence number", "classes of vehicles"],
+      "contentPhrases": ["driving licence", "driver's licence"],
+      "mimeTypes": ["application/pdf", "image/jpeg", "image/png"],
+      "baseConfidence": 0.88
+    },
+    {
+      "id": "identity.birth-certificate",
+      "displayName": "Birth Certificate",
+      "parentId": "identity",
+      "filenameKeywords": ["birth", "certificate"],
+      "folderKeywords": ["identity", "id", "certificates"],
+      "contentKeywords": ["certified copy", "entry of birth", "registrar", "place of birth"],
+      "contentPhrases": ["certified copy of an entry", "birth certificate"],
+      "mimeTypes": ["application/pdf"],
+      "baseConfidence": 0.9
+    },
+
+    {
+      "id": "medical.records",
+      "displayName": "Medical Records",
+      "parentId": "medical",
+      "filenameKeywords": ["medical", "health", "diagnosis", "consultation"],
+      "folderKeywords": ["medical", "health"],
+      "contentKeywords": ["patient", "diagnosis", "gp", "consultation", "physician"],
+      "contentPhrases": ["patient history", "medical record"],
+      "mimeTypes": ["application/pdf"],
+      "baseConfidence": 0.78
+    },
+    {
+      "id": "medical.prescriptions",
+      "displayName": "Prescriptions",
+      "parentId": "medical",
+      "filenameKeywords": ["prescription", "medication"],
+      "folderKeywords": ["medical", "prescriptions"],
+      "contentKeywords": ["dosage", "prescriber", "tablet", "daily", "mg"],
+      "contentPhrases": ["take one tablet", "as directed"],
+      "mimeTypes": ["application/pdf"],
+      "baseConfidence": 0.82
+    },
+    {
+      "id": "medical.test-results",
+      "displayName": "Test Results",
+      "parentId": "medical",
+      "filenameKeywords": ["lab", "test", "results", "pathology", "bloods"],
+      "folderKeywords": ["medical", "tests"],
+      "contentKeywords": ["reference range", "laboratory", "test result", "specimen"],
+      "contentPhrases": ["blood test results", "lab report"],
+      "mimeTypes": ["application/pdf"],
+      "baseConfidence": 0.8
+    },
+
+    {
+      "id": "academic.certificates",
+      "displayName": "Academic Certificates",
+      "parentId": "academic",
+      "filenameKeywords": ["diploma", "degree", "certificate", "matric", "graduation"],
+      "folderKeywords": ["academic", "education", "qualifications", "certificates"],
+      "contentKeywords": ["awarded", "graduated", "conferred", "honours", "bachelor", "master"],
+      "contentPhrases": ["hereby certify", "has successfully completed"],
+      "mimeTypes": ["application/pdf"],
+      "baseConfidence": 0.82
+    },
+    {
+      "id": "academic.transcripts",
+      "displayName": "Transcripts & Results",
+      "parentId": "academic",
+      "filenameKeywords": ["transcript", "results", "academic", "grade", "marks"],
+      "folderKeywords": ["academic", "education", "results"],
+      "contentKeywords": ["subject", "grade", "module", "semester", "gpa", "credit"],
+      "contentPhrases": ["academic transcript", "statement of results"],
+      "mimeTypes": ["application/pdf"],
+      "baseConfidence": 0.82
+    },
+    {
+      "id": "academic.cv-resume",
+      "displayName": "CV / Resume",
+      "parentId": "academic",
+      "filenameKeywords": ["cv", "resume", "curriculum vitae"],
+      "folderKeywords": ["cv", "resume", "career"],
+      "contentKeywords": ["work experience", "education", "skills", "references", "profile"],
+      "contentPhrases": ["curriculum vitae", "professional summary"],
+      "mimeTypes": ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      "baseConfidence": 0.8
+    },
+
+    {
+      "id": "vehicle.registration",
+      "displayName": "Vehicle Registration",
+      "parentId": "vehicle",
+      "filenameKeywords": ["vehicle", "registration", "cor", "roadworthy", "v5", "logbook", "log book"],
+      "folderKeywords": ["car", "vehicle", "motor"],
+      "contentKeywords": ["vehicle registration", "chassis number", "engine number", "vin", "licence plate"],
+      "contentPhrases": ["certificate of registration", "registration document"],
+      "mimeTypes": ["application/pdf"],
+      "baseConfidence": 0.85
+    },
+    {
+      "id": "vehicle.ownership",
+      "displayName": "Vehicle Ownership & Condition",
+      "parentId": "vehicle",
+      "filenameKeywords": ["condition", "odometer", "log book"],
+      "folderKeywords": ["car", "vehicle", "motor"],
+      "contentKeywords": ["vin", "make", "model", "odometer", "mileage", "purchase price"],
+      "contentPhrases": ["condition report", "bill of sale"],
+      "mimeTypes": ["application/pdf"],
+      "baseConfidence": 0.78
+    },
+
+    {
+      "id": "personal.letters-cards",
+      "displayName": "Letters & Cards",
+      "parentId": "personal",
+      "filenameKeywords": ["letter", "card"],
+      "folderKeywords": ["letters", "cards", "correspondence"],
+      "contentKeywords": ["dear", "sincerely", "yours truly"],
+      "mimeTypes": ["application/pdf", "image/jpeg", "image/png"],
+      "baseConfidence": 0.6
+    },
+    {
+      "id": "personal.journal-diary",
+      "displayName": "Journal & Diary Entries",
+      "parentId": "personal",
+      "filenameKeywords": ["journal", "diary"],
+      "folderKeywords": ["journal", "diary", "notes"],
+      "contentKeywords": [],
+      "mimeTypes": ["application/pdf", "text/plain"],
+      "baseConfidence": 0.55
+    },
+
+    {
+      "id": "reference.manuals-warranties",
+      "displayName": "Manuals & Warranties",
+      "parentId": "reference",
+      "filenameKeywords": ["manual", "warranty", "guide", "instructions", "getting started"],
+      "folderKeywords": ["manuals", "warranties", "guides", "docs"],
+      "contentKeywords": ["warranty", "user guide", "instruction manual", "troubleshooting"],
+      "contentPhrases": ["read these instructions", "quick start guide"],
+      "mimeTypes": ["application/pdf"],
+      "baseConfidence": 0.7
+    }
+  ]
+}
