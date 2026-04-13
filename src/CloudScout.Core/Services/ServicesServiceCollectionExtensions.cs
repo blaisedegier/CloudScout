@@ -1,7 +1,7 @@
+using CloudScout.Core.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
-using CloudScout.Core.Persistence;
 
 namespace CloudScout.Core.Services;
 

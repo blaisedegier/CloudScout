@@ -51,6 +51,7 @@ try
         ResultsCommand.Build(host.Services),
     };
 
+    // Per-command actions wrap themselves with CommandErrorHandler; we just invoke.
     return await root.Parse(args).InvokeAsync();
 }
 catch (Exception ex)

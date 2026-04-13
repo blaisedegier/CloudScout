@@ -33,12 +33,12 @@ public static class ScanCommand
             connectionIdOption,
         };
 
-        command.SetAction(async (parseResult, ct) =>
+        command.SetAction(CommandErrorHandler.Wrap(async (parseResult, ct) =>
         {
             var taxonomy = parseResult.GetValue(taxonomyOption)!;
             var connectionId = parseResult.GetValue(connectionIdOption);
             return await RunAsync(services, taxonomy, connectionId, ct);
-        });
+        }));
 
         return command;
     }

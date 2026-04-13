@@ -32,12 +32,12 @@ public static class ResultsCommand
             limitOption,
         };
 
-        command.SetAction(async (parseResult, ct) =>
+        command.SetAction(CommandErrorHandler.Wrap(async (parseResult, ct) =>
         {
             var sessionId = parseResult.GetValue(sessionIdOption);
             var limit = parseResult.GetValue(limitOption);
             return await RunAsync(services, sessionId, limit, ct);
-        });
+        }));
 
         return command;
     }

@@ -27,11 +27,11 @@ public static class ConnectCommand
             providerArg,
         };
 
-        command.SetAction(async (parseResult, ct) =>
+        command.SetAction(CommandErrorHandler.Wrap(async (parseResult, ct) =>
         {
             var providerName = parseResult.GetValue(providerArg)!;
             return await RunAsync(services, providerName, ct);
-        });
+        }));
 
         return command;
     }
