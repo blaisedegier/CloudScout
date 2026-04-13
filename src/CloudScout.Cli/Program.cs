@@ -23,7 +23,15 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    var builder = Host.CreateApplicationBuilder(args);
+    // Pin the ContentRoot to the directory containing the executable. Without this, the
+    // generic host defaults to Environment.CurrentDirectory — which is wherever the user
+    // invoked `dotnet run` from, not the project folder. That would cause appsettings.json
+    // and appsettings.Local.json (copied next to the exe via the csproj) to be missed.
+    var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+    {
+        Args = args,
+        ContentRootPath = AppContext.BaseDirectory,
+    });
 
     // appsettings.json ships with the app (has empty placeholders); appsettings.Local.json is
     // gitignored and supplies real secrets for local development. Missing = fine.
