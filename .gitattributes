@@ -1,0 +1,3 @@
+# Force LF line endings on the shell wrapper so it works on macOS/Linux
+# even when cloned from a Windows machine. The .cmd wrapper is fine with CRLF.
+cloudscout text eol=lf
