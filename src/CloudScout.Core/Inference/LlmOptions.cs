@@ -1,32 +1,22 @@
 namespace CloudScout.Core.Inference;
 
 /// <summary>
-/// Configuration for the local LLM inference engine. Bound from the <c>Llm</c> section
-/// in appsettings.json / appsettings.Local.json. All paths are relative to the CLI's
-/// ContentRoot (AppContext.BaseDirectory) unless absolute.
+/// Configuration for the LLM inference endpoint. Bound from the <c>Llm</c> section in
+/// appsettings.json / appsettings.Local.json. When <see cref="ServerUrl"/> is empty, Tier 3
+/// is gracefully disabled — the orchestrator skips it with zero overhead.
+///
+/// The server is expected to expose an OpenAI-compatible <c>/v1/chat/completions</c> endpoint.
+/// Compatible servers: llama-server (llama.cpp), Ollama, LM Studio, vLLM, any OpenAI proxy.
 /// </summary>
 public class LlmOptions
 {
     public const string SectionName = "Llm";
 
     /// <summary>
-    /// Path to the GGUF model file, e.g. <c>../../models/gemma-4-e2b-it-q8_0.gguf</c>.
-    /// Resolved relative to ContentRoot at runtime. Empty string = Tier 3 is disabled
-    /// (the orchestrator gracefully skips it).
+    /// Base URL of the inference server, e.g. <c>http://localhost:8080</c>. Must expose an
+    /// OpenAI-compatible <c>/v1/chat/completions</c> endpoint. Empty = Tier 3 disabled.
     /// </summary>
-    public string ModelPath { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Context window size in tokens. Larger = more file text can be included in the prompt
-    /// but uses more RAM. 4096 is adequate for first-few-pages classification.
-    /// </summary>
-    public int ContextSize { get; set; } = 4096;
-
-    /// <summary>
-    /// Number of model layers to offload to GPU. 0 = pure CPU inference (default).
-    /// Set to -1 to offload all layers if a CUDA/Metal GPU is available.
-    /// </summary>
-    public int GpuLayerCount { get; set; } = 0;
+    public string ServerUrl { get; set; } = string.Empty;
 
     /// <summary>
     /// Maximum tokens the model may generate per classification response.

@@ -70,16 +70,12 @@ public sealed class Tier3LlmClassifier : IClassificationTier
             return Array.Empty<ClassificationResult>();
         }
 
-        // The model sometimes wraps the JSON in markdown code fences or extra whitespace.
-        // Strip common wrapper patterns before parsing.
-        var json = raw.Trim();
-        if (json.StartsWith("```"))
-        {
-            var startIdx = json.IndexOf('{');
-            var endIdx = json.LastIndexOf('}');
-            if (startIdx >= 0 && endIdx > startIdx)
-                json = json.Substring(startIdx, endIdx - startIdx + 1);
-        }
+        // Gemma 4 has a "thinking" mode that emits reasoning tokens before the actual
+        // answer. The response may look like:
+        //   <|think|>The file appears to be...<|/think|>{"categoryId": "...", ...}
+        // Strip everything up to and including the closing think tag, then extract the
+        // first JSON object. Also handles markdown code fences.
+        var json = StripThinkingAndExtractJson(raw);
 
         LlmClassificationResponse? response;
         try
@@ -120,6 +116,44 @@ public sealed class Tier3LlmClassifier : IClassificationTier
                 Tier: Tier,
                 Reason: $"LLM: {reason}")
         };
+    }
+
+    /// <summary>
+    /// Strips Gemma 4's thinking block, markdown fences, and any other wrapper around the
+    /// JSON object. Returns just the first <c>{...}</c> found, or the raw input if none found.
+    /// </summary>
+    private static string StripThinkingAndExtractJson(string raw)
+    {
+        var text = raw.Trim();
+
+        // Strip <|think|>...<|/think|> or <think>...</think> blocks (Gemma 4 reasoning output)
+        var thinkEndPatterns = new[] { "<|/think|>", "</think>", "<turn|>" };
+        foreach (var pattern in thinkEndPatterns)
+        {
+            var idx = text.IndexOf(pattern, StringComparison.OrdinalIgnoreCase);
+            if (idx >= 0)
+            {
+                text = text.Substring(idx + pattern.Length).Trim();
+                break;
+            }
+        }
+
+        // Strip markdown code fences
+        if (text.StartsWith("```"))
+        {
+            var nlIdx = text.IndexOf('\n');
+            if (nlIdx >= 0) text = text.Substring(nlIdx + 1);
+            if (text.EndsWith("```")) text = text[..^3];
+            text = text.Trim();
+        }
+
+        // Extract the first JSON object if there's surrounding text
+        var startIdx = text.IndexOf('{');
+        var endIdx = text.LastIndexOf('}');
+        if (startIdx >= 0 && endIdx > startIdx)
+            text = text.Substring(startIdx, endIdx - startIdx + 1);
+
+        return text;
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new()
