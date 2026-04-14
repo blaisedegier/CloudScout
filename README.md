@@ -1,4 +1,4 @@
-# CloudScout
+# CloudScout ☁️
 
 A pluggable document classifier that connects to your cloud storage, recursively scans every file, and suggests which ones matter — using a tiered AI pipeline that escalates from cheap metadata heuristics to a self-hosted multimodal LLM only when necessary.
 

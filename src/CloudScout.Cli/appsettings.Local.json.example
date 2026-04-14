@@ -1,9 +1,13 @@
 {
-  "_comment": "Copy this file to appsettings.Local.json (which is gitignored) and fill in the ClientId from your Entra ID app registration. See docs/setup.md for the walkthrough.",
+  "_comment": "Copy this file to appsettings.Local.json (which is gitignored) and fill in your values. See the README for the full walkthrough.",
   "Authentication": {
     "Microsoft": {
       "ClientId": "YOUR-APPLICATION-CLIENT-ID-HERE",
       "TenantId": "common"
     }
+  },
+  "Llm": {
+    "ServerExePath": "tools/llama-server.exe",
+    "ModelPath": "models/gemma-4-E2B-it-Q8_0.gguf"
   }
 }
