@@ -44,7 +44,7 @@ try
 
     builder.Services.AddCloudScoutCrawling(builder.Configuration);
     builder.Services.AddCloudScoutTaxonomy();
-    builder.Services.AddCloudScoutClassification();
+    builder.Services.AddCloudScoutClassification(builder.Configuration);
     builder.Services.AddCloudScoutServices(builder.Configuration);
 
     using var host = builder.Build();

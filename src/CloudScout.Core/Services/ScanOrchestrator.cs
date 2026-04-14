@@ -283,17 +283,35 @@ public sealed class ScanOrchestrator
         {
             await using var stream = await provider.DownloadAsync(connection.HomeAccountId, file.ExternalFileId, ct);
             var text = await _textExtraction.ExtractAsync(stream, file.MimeType, file.FileName, cancellationToken: ct);
-            if (string.IsNullOrWhiteSpace(text)) return allResults;
 
-            context.ExtractedText = text;
-            var tier1Results = await _pipeline.RunTierAsync(1, context, taxonomy, ct);
-            allResults.AddRange(tier1Results);
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                context.ExtractedText = text;
+                var tier1Results = await _pipeline.RunTierAsync(1, context, taxonomy, ct);
+                allResults.AddRange(tier1Results);
+            }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // One file failing to download or extract shouldn't abort the scan — keep the Tier 0
-            // result and move on. The warning is enough to investigate later.
             _logger.LogWarning(ex, "Tier 1 content fetch/extract failed for {Path}; using Tier 0 result only", file.ExternalPath);
+        }
+
+        // Tier 3 (LLM) — most expensive. Only invoke when T0+T1 combined didn't reach confidence
+        // threshold. Tier 3 handles IsAvailable internally: if no model is configured it returns
+        // empty, costing nothing. The LLM sees whatever metadata + extracted text is in the
+        // context — it doesn't need to re-download the file.
+        var combinedMax = allResults.Max(r => (double?)r.ConfidenceScore) ?? 0;
+        if (combinedMax < HighConfidenceThreshold)
+        {
+            try
+            {
+                var tier3Results = await _pipeline.RunTierAsync(3, context, taxonomy, ct);
+                allResults.AddRange(tier3Results);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex, "Tier 3 LLM inference failed for {Path}; continuing with Tier 0/1 results", file.ExternalPath);
+            }
         }
 
         return allResults;
