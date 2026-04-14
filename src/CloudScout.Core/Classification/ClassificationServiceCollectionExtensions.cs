@@ -30,9 +30,10 @@ public static class ClassificationServiceCollectionExtensions
         services.AddSingleton<IClassificationTier, Tier3LlmClassifier>();
 
         // LLM inference backing Tier 3. Config-driven: empty ServerUrl = disabled.
-        // Uses an OpenAI-compatible HTTP endpoint (llama-server, Ollama, LM Studio, etc.)
-        // rather than in-process model loading, so model support isn't gated by NuGet releases.
+        // LlmServerManager auto-launches llama-server as a child process on first use
+        // if the endpoint isn't already reachable. Single point of entry for the user.
         services.Configure<LlmOptions>(configuration.GetSection(LlmOptions.SectionName));
+        services.AddSingleton<LlmServerManager>();
         services.AddSingleton<ILlmInference, HttpLlmInference>();
 
         services.AddSingleton<ClassificationPipeline>();

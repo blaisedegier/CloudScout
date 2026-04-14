@@ -11,20 +11,26 @@ namespace CloudScout.Core.Inference;
 /// <c>/v1/chat/completions</c> HTTP endpoint. Works with llama-server (llama.cpp), Ollama,
 /// LM Studio, vLLM, or any compatible API — decoupling model support from NuGet release cycles.
 ///
-/// The user runs the server separately (e.g. <c>llama-server -m model.gguf -c 4096 --port 8080</c>)
-/// and CloudScout calls it over localhost. No native binaries, no in-process model loading.
+/// When <see cref="LlmOptions.AutoLaunch"/> is true, the server is started automatically
+/// as a child process on first use via <see cref="LlmServerManager"/>. The user just runs
+/// <c>cloudscout scan</c> — no separate terminal needed.
 /// </summary>
 public sealed class HttpLlmInference : ILlmInference, IDisposable
 {
     private readonly LlmOptions _options;
+    private readonly LlmServerManager _serverManager;
     private readonly HttpClient _http;
     private readonly ILogger<HttpLlmInference> _logger;
 
-    public HttpLlmInference(IOptions<LlmOptions> options, ILogger<HttpLlmInference> logger)
+    public HttpLlmInference(
+        IOptions<LlmOptions> options,
+        LlmServerManager serverManager,
+        ILogger<HttpLlmInference> logger)
     {
         _options = options.Value;
+        _serverManager = serverManager;
         _logger = logger;
-        _http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) }; // large models can be slow on CPU
+        _http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
     }
 
     public bool IsAvailable => !string.IsNullOrWhiteSpace(_options.ServerUrl);
@@ -33,6 +39,9 @@ public sealed class HttpLlmInference : ILlmInference, IDisposable
     {
         if (!IsAvailable)
             throw new InvalidOperationException("LLM server URL is not configured. Set Llm:ServerUrl in appsettings.");
+
+        // Ensure the server is running (auto-launches on first call if configured).
+        await _serverManager.EnsureRunningAsync(cancellationToken).ConfigureAwait(false);
 
         var baseUrl = _options.ServerUrl.TrimEnd('/');
         var requestBody = new ChatCompletionRequest

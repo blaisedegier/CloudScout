@@ -39,6 +39,11 @@ models/*.bin
 models/*.safetensors
 !models/.gitkeep
 
+# Local llama-server binary and companion DLLs (too large for git)
+# Extract the llama.cpp release zip into tools/ — see docs/setup.md
+tools/*
+!tools/.gitkeep
+
 # Logs
 *.log
 logs/
