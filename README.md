@@ -8,11 +8,25 @@ Built with .NET 10, Gemma 4 E2B, and an extensible JSON taxonomy system.
 
 CloudScout classifies files through three tiers, each progressively more expensive. The pipeline short-circuits as soon as confidence is high enough — most files never touch the LLM.
 
-| Tier   | Method                                                     | Speed  | When it runs                |
-| ------ | ---------------------------------------------------------- | ------ | --------------------------- |
-| **T0** | Filename, folder path, MIME type keywords                  | ~1ms   | Always                      |
-| **T1** | Text extraction (PDF, DOCX, TXT) + keyword/phrase matching | ~100ms | When T0 confidence < 70%    |
-| **T3** | Gemma 4 E2B via llama-server (OpenAI-compatible API)       | ~5-10s | When T0+T1 confidence < 70% |
+| Tier   | Method                                                      | Speed  | When it runs                |
+| ------ | ----------------------------------------------------------- | ------ | --------------------------- |
+| **T0** | Filename, folder path, MIME type keywords                   | ~1ms   | Always                      |
+| **T1** | Text extraction + keyword/phrase matching (see table below) | ~100ms | When T0 confidence < 70%    |
+| **T3** | Gemma 4 E2B via llama-server (OpenAI-compatible API)        | ~5-10s | When T0+T1 confidence < 70% |
+
+### Tier 1 Format Support
+
+Modern office formats are read natively so classification happens on real content, not filename guesses. Tier 3 is the fallback for ambiguous cases — not the workhorse.
+
+| Format family             | Extensions                                  | Library                                  |
+| ------------------------- | ------------------------------------------- | ---------------------------------------- |
+| PDF                       | `.pdf`                                      | PdfPig                                   |
+| Microsoft Office (modern) | `.docx`, `.xlsx`, `.xlsm`, `.pptx`, `.pptm` | DocumentFormat.OpenXml                   |
+| OpenDocument              | `.odt`, `.ods`, `.odp`                      | System.IO.Compression + System.Xml (BCL) |
+| Rich Text                 | `.rtf`                                      | Custom parser (no dependency)            |
+| Plain text                | `.txt`, `.csv`, `.md`, `.log`               | StreamReader                             |
+
+Legacy binary formats (`.doc`, `.xls`, `.ppt`) fall through to Tier 3 — the .NET ecosystem has no clean permissive-licensed reader for them on modern runtimes.
 
 Files are classified against a **pluggable JSON taxonomy**. The default covers 30 categories across Financial, Legal, Identity, Medical, Academic, Vehicle, Personal Memories, and Reference documents. You can author your own taxonomy for any domain.
 
@@ -209,7 +223,7 @@ CloudScout/
       Taxonomy/                JSON taxonomy model, loader, embedded defaults
     CloudScout.Cli/            CLI entry point (System.CommandLine)
   tests/
-    CloudScout.Core.Tests/     22 unit tests (taxonomy, Tier 0, Tier 1)
+    CloudScout.Core.Tests/     58 unit tests (taxonomy, Tier 0, Tier 1, extractors)
   models/                      (gitignored) GGUF model files
   tools/                       (gitignored) llama-server binary + DLLs
   cloudscout                   Shell wrapper (macOS/Linux)
@@ -218,17 +232,18 @@ CloudScout/
 
 ## Tech Stack
 
-| Component       | Choice                           | License             |
-| --------------- | -------------------------------- | ------------------- |
-| Runtime         | .NET 10 LTS                      | MIT                 |
-| Cloud API       | Microsoft.Graph SDK              | MIT                 |
-| OAuth           | Microsoft.Identity.Client (MSAL) | MIT                 |
-| PDF extraction  | PdfPig                           | Apache 2.0          |
-| DOCX extraction | DocumentFormat.OpenXml           | MIT                 |
-| LLM model       | Gemma 4 E2B                      | Apache 2.0          |
-| LLM server      | llama-server (llama.cpp)         | MIT                 |
-| Local storage   | SQLite via EF Core               | MIT / Public Domain |
-| CLI framework   | System.CommandLine               | MIT                 |
+| Component                          | Choice                                     | License             |
+| ---------------------------------- | ------------------------------------------ | ------------------- |
+| Runtime                            | .NET 10 LTS                                | MIT                 |
+| Cloud API                          | Microsoft.Graph SDK                        | MIT                 |
+| OAuth                              | Microsoft.Identity.Client (MSAL)           | MIT                 |
+| PDF extraction                     | PdfPig                                     | Apache 2.0          |
+| Office extraction (docx/xlsx/pptx) | DocumentFormat.OpenXml                     | MIT                 |
+| OpenDocument / RTF extraction      | BCL (System.IO.Compression, custom parser) | MIT                 |
+| LLM model                          | Gemma 4 E2B                                | Apache 2.0          |
+| LLM server                         | llama-server (llama.cpp)                   | MIT                 |
+| Local storage                      | SQLite via EF Core                         | MIT / Public Domain |
+| CLI framework                      | System.CommandLine                         | MIT                 |
 
 All dependencies are MIT or Apache 2.0 licensed. No proprietary, commercial, or restrictively licensed components.
 
