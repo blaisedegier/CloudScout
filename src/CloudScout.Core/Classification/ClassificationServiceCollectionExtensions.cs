@@ -21,6 +21,7 @@ public static class ClassificationServiceCollectionExtensions
         // that says CanHandle(); plain text is last so it doesn't shadow structured formats.
         services.AddSingleton<ITextExtractor, PdfTextExtractor>();
         services.AddSingleton<ITextExtractor, OpenXmlDocxTextExtractor>();
+        services.AddSingleton<ITextExtractor, OpenXmlXlsxTextExtractor>();
         services.AddSingleton<ITextExtractor, PlainTextExtractor>();
         services.AddSingleton<TextExtractionService>();
 
