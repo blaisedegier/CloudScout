@@ -24,6 +24,7 @@ public static class ClassificationServiceCollectionExtensions
         services.AddSingleton<ITextExtractor, OpenXmlXlsxTextExtractor>();
         services.AddSingleton<ITextExtractor, OpenXmlPptxTextExtractor>();
         services.AddSingleton<ITextExtractor, OpenDocumentTextExtractor>();
+        services.AddSingleton<ITextExtractor, RtfTextExtractor>();
         services.AddSingleton<ITextExtractor, PlainTextExtractor>();
         services.AddSingleton<TextExtractionService>();
 
