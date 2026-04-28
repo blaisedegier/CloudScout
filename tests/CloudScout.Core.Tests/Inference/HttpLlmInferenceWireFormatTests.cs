@@ -19,8 +19,9 @@ public class HttpLlmInferenceWireFormatTests
     [Fact]
     public async Task Text_only_request_uses_string_content()
     {
+        var ct = TestContext.Current.CancellationToken;
         var captured = await CaptureRequestAsync(inference =>
-            inference.GenerateAsync("Classify this file."));
+            inference.GenerateAsync("Classify this file.", cancellationToken: ct), ct);
 
         var content = captured.RootElement
             .GetProperty("messages")[0]
@@ -33,9 +34,10 @@ public class HttpLlmInferenceWireFormatTests
     [Fact]
     public async Task Image_request_uses_content_parts_array_with_data_uri()
     {
+        var ct = TestContext.Current.CancellationToken;
         var imageBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 }; // arbitrary; we just check it's encoded
         var captured = await CaptureRequestAsync(inference =>
-            inference.GenerateAsync("Classify this image.", imageBytes, "image/jpeg"));
+            inference.GenerateAsync("Classify this image.", imageBytes, "image/jpeg", ct), ct);
 
         var content = captured.RootElement
             .GetProperty("messages")[0]
@@ -58,8 +60,9 @@ public class HttpLlmInferenceWireFormatTests
     [Fact]
     public async Task Image_request_falls_back_to_image_jpeg_when_mime_is_null()
     {
+        var ct = TestContext.Current.CancellationToken;
         var captured = await CaptureRequestAsync(inference =>
-            inference.GenerateAsync("Look", new byte[] { 1, 2, 3 }, imageMimeType: null));
+            inference.GenerateAsync("Look", new byte[] { 1, 2, 3 }, imageMimeType: null, cancellationToken: ct), ct);
 
         var url = captured.RootElement
             .GetProperty("messages")[0]
@@ -71,14 +74,16 @@ public class HttpLlmInferenceWireFormatTests
         url.Should().StartWith("data:image/jpeg;base64,");
     }
 
-    private static async Task<JsonDocument> CaptureRequestAsync(Func<HttpLlmInference, Task<string>> call)
+    private static async Task<JsonDocument> CaptureRequestAsync(
+        Func<HttpLlmInference, Task<string>> call,
+        CancellationToken cancellationToken)
     {
         // The handler stashes the outgoing request body so we can assert on its shape, then
         // returns a stub OpenAI-compatible response so the call completes successfully.
         string? capturedBody = null;
         var handler = new CapturingHandler(async req =>
         {
-            capturedBody = req.Content is null ? null : await req.Content.ReadAsStringAsync();
+            capturedBody = req.Content is null ? null : await req.Content.ReadAsStringAsync(cancellationToken);
             return JsonContent.Create(new
             {
                 choices = new[]

@@ -27,7 +27,7 @@ public class Tier1KeywordClassifierTests
             ExtractedText = null,
         };
 
-        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed());
+        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed(), TestContext.Current.CancellationToken);
 
         results.Should().BeEmpty();
     }
@@ -38,7 +38,7 @@ public class Tier1KeywordClassifierTests
         // "iban" is a banking content keyword; no other banking signals.
         var ctx = ContextWithText("Your IBAN is GB12 ABCD 0000.");
 
-        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed());
+        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed(), TestContext.Current.CancellationToken);
 
         var banking = results.First(r => r.CategoryId == "banking");
         // First-keyword weight 0.40 * base 0.80 = 0.32
@@ -52,7 +52,7 @@ public class Tier1KeywordClassifierTests
         // Both "iban" AND "account number" match.
         var ctx = ContextWithText("IBAN: GB12 ABCD; account number: 12345678");
 
-        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed());
+        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed(), TestContext.Current.CancellationToken);
 
         // (0.40 first + 0.10 additional) * 0.80 = 0.40
         var banking = results.First(r => r.CategoryId == "banking");
@@ -65,8 +65,9 @@ public class Tier1KeywordClassifierTests
         var phraseCtx = ContextWithText("This closing balance of the account is positive.");
         var keywordCtx = ContextWithText("Please reference your IBAN on transfers.");
 
-        var phraseResult = (await _sut.ClassifyAsync(phraseCtx, TestTaxonomies.Mixed())).First(r => r.CategoryId == "banking");
-        var keywordResult = (await _sut.ClassifyAsync(keywordCtx, TestTaxonomies.Mixed())).First(r => r.CategoryId == "banking");
+        var ct = TestContext.Current.CancellationToken;
+        var phraseResult = (await _sut.ClassifyAsync(phraseCtx, TestTaxonomies.Mixed(), ct)).First(r => r.CategoryId == "banking");
+        var keywordResult = (await _sut.ClassifyAsync(keywordCtx, TestTaxonomies.Mixed(), ct)).First(r => r.CategoryId == "banking");
 
         phraseResult.ConfidenceScore.Should().BeGreaterThan(keywordResult.ConfidenceScore);
     }
@@ -78,7 +79,7 @@ public class Tier1KeywordClassifierTests
         // should NOT score as a wills match.
         var ctx = ContextWithText("William and Sarah went to the beach.");
 
-        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed());
+        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed(), TestContext.Current.CancellationToken);
 
         results.Should().NotContain(r => r.CategoryId == "wills");
     }
@@ -88,7 +89,7 @@ public class Tier1KeywordClassifierTests
     {
         var ctx = ContextWithText("The testator appointed her executor on 1 Jan 2024.");
 
-        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed());
+        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed(), TestContext.Current.CancellationToken);
 
         results.Should().Contain(r => r.CategoryId == "wills");
     }
@@ -98,7 +99,7 @@ public class Tier1KeywordClassifierTests
     {
         var ctx = ContextWithText("IBAN and ACCOUNT NUMBER are both present.");
 
-        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed());
+        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed(), TestContext.Current.CancellationToken);
 
         results.Should().Contain(r => r.CategoryId == "banking");
     }
@@ -110,7 +111,7 @@ public class Tier1KeywordClassifierTests
         // normally score banking, the negative excludes it.
         var ctx = ContextWithText("This personal statement describes a closing balance.");
 
-        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed());
+        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed(), TestContext.Current.CancellationToken);
 
         results.Should().NotContain(r => r.CategoryId == "banking");
     }
@@ -121,7 +122,7 @@ public class Tier1KeywordClassifierTests
         // Banking gets phrase + keyword hits; wills gets keyword only.
         var ctx = ContextWithText("Closing balance shown next to the IBAN. Executor noted.");
 
-        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed());
+        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed(), TestContext.Current.CancellationToken);
 
         results.Should().HaveCountGreaterThan(1);
         for (int i = 1; i < results.Count; i++)

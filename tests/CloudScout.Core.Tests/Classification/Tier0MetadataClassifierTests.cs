@@ -22,7 +22,7 @@ public class Tier0MetadataClassifierTests
         // "testament" matches wills filename keyword; no folder, no mime.
         var ctx = ContextFor("Last_Testament.pdf");
 
-        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed());
+        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed(), TestContext.Current.CancellationToken);
 
         var wills = results.FirstOrDefault(r => r.CategoryId == "wills");
         wills.Should().NotBeNull();
@@ -37,7 +37,7 @@ public class Tier0MetadataClassifierTests
     {
         var ctx = ContextFor("random.pdf", folder: "/Estate/2024");
 
-        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed());
+        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed(), TestContext.Current.CancellationToken);
 
         var wills = results.First(r => r.CategoryId == "wills");
         // 0.4 (folder weight) * 0.9 (base) = 0.36
@@ -50,7 +50,7 @@ public class Tier0MetadataClassifierTests
         // "will" in filename + "estate" folder + pdf mime = full 1.0 weight capped, * 0.9 = 0.9
         var ctx = ContextFor("Will_Final.pdf", folder: "/Estate", mime: "application/pdf");
 
-        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed());
+        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed(), TestContext.Current.CancellationToken);
 
         var wills = results.First(r => r.CategoryId == "wills");
         wills.ConfidenceScore.Should().BeApproximately(0.9, 0.001);
@@ -62,7 +62,7 @@ public class Tier0MetadataClassifierTests
         // "goodwill" is a negative for wills, even though "will" is a substring positive match.
         var ctx = ContextFor("Goodwill_Impairment.pdf");
 
-        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed());
+        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed(), TestContext.Current.CancellationToken);
 
         results.Should().NotContain(r => r.CategoryId == "wills");
     }
@@ -72,7 +72,7 @@ public class Tier0MetadataClassifierTests
     {
         var ctx = ContextFor("WILL_2024.PDF");
 
-        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed());
+        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed(), TestContext.Current.CancellationToken);
 
         results.Should().Contain(r => r.CategoryId == "wills");
     }
@@ -82,7 +82,7 @@ public class Tier0MetadataClassifierTests
     {
         var ctx = ContextFor("untitled.pdf", folder: "/Unsorted");
 
-        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed());
+        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed(), TestContext.Current.CancellationToken);
 
         results.Should().BeEmpty();
     }
@@ -93,7 +93,7 @@ public class Tier0MetadataClassifierTests
         // "invoice" matches receipts in filename, "bank" matches banking in folder.
         var ctx = ContextFor("Invoice_042.pdf", folder: "/Bank/Imports");
 
-        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed());
+        var results = await _sut.ClassifyAsync(ctx, TestTaxonomies.Mixed(), TestContext.Current.CancellationToken);
 
         results.Should().HaveCount(2);
         // receipts: 0.6 * 0.7 = 0.42; banking: 0.4 * 0.8 = 0.32

@@ -29,7 +29,7 @@ public class Tier3LlmClassifierVisionTests
             SourceBytes = new byte[] { 0xFF, 0xD8, 0xFF },
         };
 
-        await sut.ClassifyAsync(context, MakeTaxonomy());
+        await sut.ClassifyAsync(context, MakeTaxonomy(), TestContext.Current.CancellationToken);
 
         fakeInference.LastImageBytes.Should().NotBeNull();
         fakeInference.LastImageMimeType.Should().Be("image/jpeg");
@@ -54,7 +54,7 @@ public class Tier3LlmClassifierVisionTests
             ExtractedText = "some text",
         };
 
-        await sut.ClassifyAsync(context, MakeTaxonomy());
+        await sut.ClassifyAsync(context, MakeTaxonomy(), TestContext.Current.CancellationToken);
 
         fakeInference.LastImageBytes.Should().BeNull();
         fakeInference.LastImageMimeType.Should().BeNull();
@@ -77,7 +77,7 @@ public class Tier3LlmClassifierVisionTests
             SourceBytes = null,
         };
 
-        await sut.ClassifyAsync(context, MakeTaxonomy());
+        await sut.ClassifyAsync(context, MakeTaxonomy(), TestContext.Current.CancellationToken);
 
         fakeInference.LastImageBytes.Should().BeNull();
     }

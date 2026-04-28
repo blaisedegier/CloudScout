@@ -43,7 +43,7 @@ public class OpenXmlXlsxTextExtractorTests
         // resolves the references rather than emitting bare integers.
         using var stream = BuildSyntheticXlsx(new[] { "Banking Statement", "IBAN GB12", "Closing balance" });
 
-        var text = await _sut.ExtractAsync(stream, maxChars: 5000);
+        var text = await _sut.ExtractAsync(stream, maxChars: 5000, TestContext.Current.CancellationToken);
 
         text.Should().Contain("Banking Statement");
         text.Should().Contain("IBAN GB12");
@@ -55,7 +55,7 @@ public class OpenXmlXlsxTextExtractorTests
     {
         using var stream = BuildSyntheticXlsx(new[] { new string('A', 100), new string('B', 100), new string('C', 100) });
 
-        var text = await _sut.ExtractAsync(stream, maxChars: 50);
+        var text = await _sut.ExtractAsync(stream, maxChars: 50, TestContext.Current.CancellationToken);
 
         text.Length.Should().BeLessThanOrEqualTo(50);
     }
@@ -67,7 +67,7 @@ public class OpenXmlXlsxTextExtractorTests
         using var seekable = BuildSyntheticXlsx(new[] { "payroll" });
         using var nonSeekable = new NonSeekableStream(seekable);
 
-        var text = await _sut.ExtractAsync(nonSeekable, maxChars: 1000);
+        var text = await _sut.ExtractAsync(nonSeekable, maxChars: 1000, TestContext.Current.CancellationToken);
 
         text.Should().Contain("payroll");
     }

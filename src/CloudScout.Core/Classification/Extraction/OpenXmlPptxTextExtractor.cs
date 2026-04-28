@@ -44,7 +44,9 @@ public sealed class OpenXmlPptxTextExtractor : ITextExtractor
                 cancellationToken.ThrowIfCancellationRequested();
                 if (sb.Length >= maxChars) break;
 
-                var slideText = slidePart.Slide.InnerText;
+                // SlidePart.Slide is non-null in valid pptx files but the OpenXml type is nullable.
+                // Guard so a malformed slide (e.g. corrupt zip entry) skips rather than crashes.
+                var slideText = slidePart.Slide?.InnerText;
                 if (string.IsNullOrEmpty(slideText)) continue;
 
                 sb.Append(slideText);

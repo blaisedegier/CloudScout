@@ -23,35 +23,37 @@ public class ScanOrchestratorDeltaTests
     [Fact]
     public async Task First_scan_with_no_prior_session_marks_all_files_as_New()
     {
+        var ct = TestContext.Current.CancellationToken;
         await using var fixture = await TestFixture.CreateAsync();
-        var connection = await fixture.SeedConnectionAsync();
+        var connection = await fixture.SeedConnectionAsync(ct);
 
         fixture.Provider.QueueFiles(
             File("id-1", "/a.txt", BaseTime),
             File("id-2", "/b.txt", BaseTime));
 
-        await fixture.Orchestrator.RunScanAsync(connection.Id, "test-taxonomy");
+        await fixture.Orchestrator.RunScanAsync(connection.Id, "test-taxonomy", cancellationToken: ct);
 
-        var files = await fixture.Db.CrawledFiles.AsNoTracking().ToListAsync();
+        var files = await fixture.Db.CrawledFiles.AsNoTracking().ToListAsync(ct);
         files.Should().HaveCount(2);
         files.Should().OnlyContain(f => f.ChangeStatus == ChangeStatusValues.New);
 
         // Tier 0 stub produces one suggestion per file, and no prior session exists, so every
         // file goes through the classification path (no copying yet).
-        var suggestions = await fixture.Db.FileSuggestions.AsNoTracking().ToListAsync();
+        var suggestions = await fixture.Db.FileSuggestions.AsNoTracking().ToListAsync(ct);
         suggestions.Should().HaveCount(2);
     }
 
     [Fact]
     public async Task Second_scan_with_identical_files_marks_all_as_Unchanged_and_clones_suggestions()
     {
+        var ct = TestContext.Current.CancellationToken;
         await using var fixture = await TestFixture.CreateAsync();
-        var connection = await fixture.SeedConnectionAsync();
+        var connection = await fixture.SeedConnectionAsync(ct);
 
         fixture.Provider.QueueFiles(
             File("id-1", "/a.txt", BaseTime),
             File("id-2", "/b.txt", BaseTime));
-        await fixture.Orchestrator.RunScanAsync(connection.Id, "test-taxonomy");
+        await fixture.Orchestrator.RunScanAsync(connection.Id, "test-taxonomy", cancellationToken: ct);
 
         // Re-queue the same files for the second scan.
         fixture.Provider.QueueFiles(
@@ -61,20 +63,20 @@ public class ScanOrchestratorDeltaTests
         // No tier should run on the second scan — assert by counting how many times the stub
         // tier was invoked across both scans.
         var invocationsBeforeSecondScan = fixture.Tier.InvocationCount;
-        await fixture.Orchestrator.RunScanAsync(connection.Id, "test-taxonomy");
+        await fixture.Orchestrator.RunScanAsync(connection.Id, "test-taxonomy", cancellationToken: ct);
 
         // Find the second session (the most recent completed for the connection).
         var sessions = await fixture.Db.ScanSessions
             .AsNoTracking()
             .OrderBy(s => s.StartedUtc)
-            .ToListAsync();
+            .ToListAsync(ct);
         sessions.Should().HaveCount(2);
 
         var secondSession = sessions[1];
         var secondScanFiles = await fixture.Db.CrawledFiles
             .AsNoTracking()
             .Where(f => f.SessionId == secondSession.Id)
-            .ToListAsync();
+            .ToListAsync(ct);
 
         secondScanFiles.Should().HaveCount(2);
         secondScanFiles.Should().OnlyContain(f => f.ChangeStatus == ChangeStatusValues.Unchanged);
@@ -83,7 +85,7 @@ public class ScanOrchestratorDeltaTests
         var secondScanSuggestions = await fixture.Db.FileSuggestions
             .AsNoTracking()
             .Where(s => secondScanFiles.Select(f => f.Id).Contains(s.FileId))
-            .ToListAsync();
+            .ToListAsync(ct);
         secondScanSuggestions.Should().HaveCount(2);
 
         // No new tier runs — copy path was taken.
@@ -93,14 +95,15 @@ public class ScanOrchestratorDeltaTests
     [Fact]
     public async Task Mix_scan_handles_New_Modified_and_Unchanged_correctly()
     {
+        var ct = TestContext.Current.CancellationToken;
         await using var fixture = await TestFixture.CreateAsync();
-        var connection = await fixture.SeedConnectionAsync();
+        var connection = await fixture.SeedConnectionAsync(ct);
 
         // Scan 1: two files
         fixture.Provider.QueueFiles(
             File("id-keep", "/keep.txt", BaseTime),
             File("id-change", "/change.txt", BaseTime));
-        await fixture.Orchestrator.RunScanAsync(connection.Id, "test-taxonomy");
+        await fixture.Orchestrator.RunScanAsync(connection.Id, "test-taxonomy", cancellationToken: ct);
 
         var invocationsAfterFirst = fixture.Tier.InvocationCount;
         invocationsAfterFirst.Should().Be(2, "first scan classifies both files");
@@ -110,15 +113,15 @@ public class ScanOrchestratorDeltaTests
             File("id-keep", "/keep.txt", BaseTime),                           // Unchanged
             File("id-change", "/change.txt", BaseTime.AddHours(1)),           // Modified
             File("id-new", "/new.txt", BaseTime));                            // New
-        await fixture.Orchestrator.RunScanAsync(connection.Id, "test-taxonomy");
+        await fixture.Orchestrator.RunScanAsync(connection.Id, "test-taxonomy", cancellationToken: ct);
 
-        var sessions = await fixture.Db.ScanSessions.AsNoTracking().OrderBy(s => s.StartedUtc).ToListAsync();
+        var sessions = await fixture.Db.ScanSessions.AsNoTracking().OrderBy(s => s.StartedUtc).ToListAsync(ct);
         var secondSession = sessions[1];
 
         var secondScanFiles = await fixture.Db.CrawledFiles
             .AsNoTracking()
             .Where(f => f.SessionId == secondSession.Id)
-            .ToDictionaryAsync(f => f.ExternalFileId, f => f.ChangeStatus);
+            .ToDictionaryAsync(f => f.ExternalFileId, f => f.ChangeStatus, ct);
 
         secondScanFiles["id-keep"].Should().Be(ChangeStatusValues.Unchanged);
         secondScanFiles["id-change"].Should().Be(ChangeStatusValues.Modified);
@@ -184,7 +187,7 @@ public class ScanOrchestratorDeltaTests
             return Task.FromResult(new TestFixture(db, orchestrator, provider, tier));
         }
 
-        public async Task<CloudConnection> SeedConnectionAsync()
+        public async Task<CloudConnection> SeedConnectionAsync(CancellationToken cancellationToken)
         {
             var c = new CloudConnection
             {
@@ -194,7 +197,7 @@ public class ScanOrchestratorDeltaTests
                 Status = ConnectionStatus.Active,
             };
             Db.CloudConnections.Add(c);
-            await Db.SaveChangesAsync();
+            await Db.SaveChangesAsync(cancellationToken);
             return c;
         }
 

@@ -48,7 +48,7 @@ public class OpenXmlPptxTextExtractorTests
             "Outlook for next quarter",
         });
 
-        var text = await _sut.ExtractAsync(stream, maxChars: 5000);
+        var text = await _sut.ExtractAsync(stream, maxChars: 5000, TestContext.Current.CancellationToken);
 
         text.Should().Contain("Quarterly Earnings 2026");
         text.Should().Contain("Revenue up 18 percent");
@@ -64,7 +64,7 @@ public class OpenXmlPptxTextExtractorTests
             new string('B', 200),
         });
 
-        var text = await _sut.ExtractAsync(stream, maxChars: 80);
+        var text = await _sut.ExtractAsync(stream, maxChars: 80, TestContext.Current.CancellationToken);
 
         text.Length.Should().BeLessThanOrEqualTo(80);
     }

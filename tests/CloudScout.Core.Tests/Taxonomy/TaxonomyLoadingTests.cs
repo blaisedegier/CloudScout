@@ -13,9 +13,10 @@ public class TaxonomyLoadingTests
     [Fact]
     public async Task Generic_default_taxonomy_loads_from_embedded_resource()
     {
+        var ct = TestContext.Current.CancellationToken;
         var provider = new EmbeddedAndFileTaxonomyProvider();
 
-        var taxonomy = await provider.GetAsync("generic-default");
+        var taxonomy = await provider.GetAsync("generic-default", ct);
 
         taxonomy.Name.Should().NotBeNullOrWhiteSpace();
         taxonomy.Version.Should().NotBeNullOrWhiteSpace();
@@ -25,8 +26,9 @@ public class TaxonomyLoadingTests
     [Fact]
     public async Task Generic_default_taxonomy_covers_the_expected_top_level_buckets()
     {
+        var ct = TestContext.Current.CancellationToken;
         var provider = new EmbeddedAndFileTaxonomyProvider();
-        var taxonomy = await provider.GetAsync("generic-default");
+        var taxonomy = await provider.GetAsync("generic-default", ct);
 
         // The exact set may evolve; lock in the coarse buckets we commit to as product defaults.
         var expectedParents = new[] { "financial", "legal", "identity", "medical", "academic", "vehicle", "personal", "reference" };
@@ -37,9 +39,10 @@ public class TaxonomyLoadingTests
     [Fact]
     public async Task Unknown_taxonomy_name_throws_with_a_list_of_available_names()
     {
+        var ct = TestContext.Current.CancellationToken;
         var provider = new EmbeddedAndFileTaxonomyProvider();
 
-        var act = async () => await provider.GetAsync("not-a-real-taxonomy");
+        var act = async () => await provider.GetAsync("not-a-real-taxonomy", ct);
 
         (await act.Should().ThrowAsync<InvalidOperationException>())
             .WithMessage("*generic-default*"); // error message should mention what IS available
@@ -48,10 +51,11 @@ public class TaxonomyLoadingTests
     [Fact]
     public async Task Repeated_lookups_are_cached_and_return_the_same_instance()
     {
+        var ct = TestContext.Current.CancellationToken;
         var provider = new EmbeddedAndFileTaxonomyProvider();
 
-        var first = await provider.GetAsync("generic-default");
-        var second = await provider.GetAsync("generic-default");
+        var first = await provider.GetAsync("generic-default", ct);
+        var second = await provider.GetAsync("generic-default", ct);
 
         second.Should().BeSameAs(first);
     }

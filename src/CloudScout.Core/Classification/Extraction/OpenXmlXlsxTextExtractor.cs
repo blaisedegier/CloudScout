@@ -53,6 +53,8 @@ public sealed class OpenXmlXlsxTextExtractor : ITextExtractor
                 cancellationToken.ThrowIfCancellationRequested();
                 if (sb.Length >= maxChars) break;
 
+                // WorksheetPart.Worksheet can be null on a malformed sheet entry; skip gracefully.
+                if (worksheetPart.Worksheet is null) continue;
                 foreach (var cell in worksheetPart.Worksheet.Descendants<Cell>())
                 {
                     if (sb.Length >= maxChars) break;

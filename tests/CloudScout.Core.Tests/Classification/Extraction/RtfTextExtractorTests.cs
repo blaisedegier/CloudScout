@@ -100,7 +100,7 @@ public class RtfTextExtractorTests
         var rtf = @"{\rtf1\ansi This is a last will and testament.\par Signed by the testator.}";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(rtf));
 
-        var text = await _sut.ExtractAsync(stream, maxChars: 1000);
+        var text = await _sut.ExtractAsync(stream, maxChars: 1000, TestContext.Current.CancellationToken);
 
         text.Should().Contain("last will and testament");
         text.Should().Contain("testator");

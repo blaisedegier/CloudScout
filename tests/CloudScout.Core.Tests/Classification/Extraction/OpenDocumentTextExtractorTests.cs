@@ -52,7 +52,7 @@ public class OpenDocumentTextExtractorTests
             </office:document-content>
             """);
 
-        var text = await _sut.ExtractAsync(stream, maxChars: 5000);
+        var text = await _sut.ExtractAsync(stream, maxChars: 5000, TestContext.Current.CancellationToken);
 
         text.Should().Contain("Life Insurance Policy");
         text.Should().Contain("Policy number: LI-20260414");
@@ -72,7 +72,7 @@ public class OpenDocumentTextExtractorTests
         }
         ms.Position = 0;
 
-        var text = await _sut.ExtractAsync(ms, maxChars: 1000);
+        var text = await _sut.ExtractAsync(ms, maxChars: 1000, TestContext.Current.CancellationToken);
 
         text.Should().BeEmpty();
     }
@@ -90,7 +90,7 @@ public class OpenDocumentTextExtractorTests
             </office:document-content>
             """);
 
-        var text = await _sut.ExtractAsync(stream, maxChars: 100);
+        var text = await _sut.ExtractAsync(stream, maxChars: 100, TestContext.Current.CancellationToken);
 
         text.Length.Should().BeLessThanOrEqualTo(100);
     }
