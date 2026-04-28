@@ -41,6 +41,14 @@ public class LlmOptions
     /// </summary>
     public string ModelPath { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Optional path to a multimodal projector (mmproj) GGUF for vision input. When set and
+    /// the file exists, llama-server is launched with <c>--mmproj &lt;path&gt;</c> so it can
+    /// process image_url content parts. Empty = vision disabled (image inputs ignored by the
+    /// server, but the rest of Tier 3 still works on metadata + extracted text).
+    /// </summary>
+    public string MmprojPath { get; set; } = string.Empty;
+
     /// <summary>Context window size passed to llama-server via <c>-c</c>.</summary>
     public int ContextSize { get; set; } = 4096;
 

@@ -120,6 +120,23 @@ public sealed class LlmServerManager : IAsyncDisposable
 
         var args = $"-m \"{modelPath}\" -c {_options.ContextSize} --port {port}";
 
+        // Optional multimodal projector for vision input. If configured but missing, log a
+        // warning and proceed without it — vision becomes unavailable but text classification
+        // still works.
+        var mmprojPath = ResolveMmprojPath();
+        if (!string.IsNullOrWhiteSpace(_options.MmprojPath))
+        {
+            if (mmprojPath is not null)
+            {
+                args += $" --mmproj \"{mmprojPath}\"";
+            }
+            else
+            {
+                _logger.LogWarning("Llm:MmprojPath is set ('{Path}') but the file was not found. " +
+                    "Vision input will be ignored.", _options.MmprojPath);
+            }
+        }
+
         _logger.LogInformation("Auto-launching: {Exe} {Args}", resolvedExe, args);
 
         try
@@ -210,6 +227,26 @@ public sealed class LlmServerManager : IAsyncDisposable
         if (File.Exists(fromBase)) return fromBase;
 
         return null;
+    }
+
+    /// <summary>
+    /// Resolves the multimodal projector path. Returns null when MmprojPath is empty (vision
+    /// not requested) or when the file isn't found at any candidate location. Caller distinguishes
+    /// "not requested" from "configured but missing" by checking <see cref="LlmOptions.MmprojPath"/>.
+    /// </summary>
+    private string? ResolveMmprojPath()
+    {
+        var path = _options.MmprojPath;
+        if (string.IsNullOrWhiteSpace(path)) return null;
+
+        if (Path.IsPathRooted(path))
+            return File.Exists(path) ? path : null;
+
+        var fromCwd = Path.GetFullPath(path);
+        if (File.Exists(fromCwd)) return fromCwd;
+
+        var fromBase = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, path));
+        return File.Exists(fromBase) ? fromBase : null;
     }
 
     private string ResolveModelPath()
