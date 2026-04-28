@@ -273,27 +273,43 @@ public sealed class ScanOrchestrator
 
         var allResults = new List<ClassificationResult>(tier0Results);
 
-        // Tier 1 needs extracted text. Only download if (a) there's room to improve on Tier 0
-        // and (b) we have an extractor that knows the file type. Both guards save bandwidth.
-        var worthExtracting = tier0Max < HighConfidenceThreshold
-                              && _textExtraction.HasExtractorFor(file.MimeType, file.FileName);
-        if (!worthExtracting) return allResults;
+        // Decide whether to download the file's content. Three reasons we'd want to:
+        //   1. There's a text extractor → run Tier 1
+        //   2. It's an image → load bytes for Tier 3 vision
+        //   3. Both — text extractors win, since text classification is cheaper and more reliable
+        // None of these matter if Tier 0 already reached high confidence.
+        var canExtractText = _textExtraction.HasExtractorFor(file.MimeType, file.FileName);
+        var isImage = IsImageMimeType(file.MimeType);
+        var worthDownloading = tier0Max < HighConfidenceThreshold && (canExtractText || isImage);
+        if (!worthDownloading) return allResults;
 
         try
         {
             await using var stream = await provider.DownloadAsync(connection.HomeAccountId, file.ExternalFileId, ct);
-            var text = await _textExtraction.ExtractAsync(stream, file.MimeType, file.FileName, cancellationToken: ct);
 
-            if (!string.IsNullOrWhiteSpace(text))
+            if (canExtractText)
             {
-                context.ExtractedText = text;
-                var tier1Results = await _pipeline.RunTierAsync(1, context, taxonomy, ct);
-                allResults.AddRange(tier1Results);
+                var text = await _textExtraction.ExtractAsync(stream, file.MimeType, file.FileName, cancellationToken: ct);
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    context.ExtractedText = text;
+                    var tier1Results = await _pipeline.RunTierAsync(1, context, taxonomy, ct);
+                    allResults.AddRange(tier1Results);
+                }
+            }
+            else if (isImage)
+            {
+                // Buffer the image into memory so Tier 3 can pass it to the multimodal model.
+                // Bounded by the per-file size (orchestrator only downloads bytes when needed)
+                // so total memory stays proportional to one file at a time.
+                using var buffer = new MemoryStream();
+                await stream.CopyToAsync(buffer, ct);
+                context.SourceBytes = buffer.ToArray();
             }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogWarning(ex, "Tier 1 content fetch/extract failed for {Path}; using Tier 0 result only", file.ExternalPath);
+            _logger.LogWarning(ex, "Content fetch failed for {Path}; using Tier 0 result only", file.ExternalPath);
         }
 
         // Tier 3 (LLM) — most expensive. Only invoke when T0+T1 combined didn't reach confidence
@@ -316,6 +332,19 @@ public sealed class ScanOrchestrator
 
         return allResults;
     }
+
+    /// <summary>
+    /// Conservative image-MIME predicate matching the formats the multimodal projector handles.
+    /// Mirrors <c>Tier3LlmClassifier.ShouldSendImage</c> — keeping the orchestrator's "should I
+    /// download" decision aligned with the classifier's "should I send to the model" decision
+    /// avoids buffering bytes the classifier won't use.
+    /// </summary>
+    private static bool IsImageMimeType(string? mimeType) =>
+        mimeType is not null && (
+            mimeType.StartsWith("image/jpeg", StringComparison.OrdinalIgnoreCase) ||
+            mimeType.StartsWith("image/png", StringComparison.OrdinalIgnoreCase) ||
+            mimeType.StartsWith("image/webp", StringComparison.OrdinalIgnoreCase) ||
+            mimeType.StartsWith("image/gif", StringComparison.OrdinalIgnoreCase));
 
     // ---- Progress reporting ------------------------------------------------------------------
 

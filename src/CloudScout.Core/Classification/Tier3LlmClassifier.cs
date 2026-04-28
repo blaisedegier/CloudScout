@@ -45,10 +45,20 @@ public sealed class Tier3LlmClassifier : IClassificationTier
             context.ExtractedText,
             taxonomy);
 
+        // For image files where the orchestrator has already downloaded the bytes, pass them
+        // to the model so it can actually look at the image. For other types (PDF, DOCX, etc.)
+        // we send only metadata + extracted text — those are already covered by Tier 1's
+        // text-based path, and the model has nothing to gain from raw bytes of a binary format.
+        var (imageBytes, imageMime) = ShouldSendImage(context)
+            ? (context.SourceBytes, context.MimeType)
+            : (null, null);
+
         string raw;
         try
         {
-            raw = await _inference.GenerateAsync(prompt, cancellationToken: cancellationToken).ConfigureAwait(false);
+            raw = await _inference
+                .GenerateAsync(prompt, imageBytes, imageMime, cancellationToken)
+                .ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -57,6 +67,22 @@ public sealed class Tier3LlmClassifier : IClassificationTier
         }
 
         return ParseResponse(raw, context.FileName, taxonomy);
+    }
+
+    /// <summary>
+    /// True when the orchestrator has loaded image bytes and the MIME type identifies an image
+    /// the multimodal projector can interpret. Conservative — we only send raster formats Gemma
+    /// is documented to handle (jpeg, png, webp, gif). HEIC and other exotic formats are
+    /// classified on metadata alone until we have evidence the projector handles them.
+    /// </summary>
+    private static bool ShouldSendImage(ClassificationContext context)
+    {
+        if (context.SourceBytes is not { Length: > 0 }) return false;
+        if (string.IsNullOrEmpty(context.MimeType)) return false;
+        return context.MimeType.StartsWith("image/jpeg", StringComparison.OrdinalIgnoreCase)
+            || context.MimeType.StartsWith("image/png", StringComparison.OrdinalIgnoreCase)
+            || context.MimeType.StartsWith("image/webp", StringComparison.OrdinalIgnoreCase)
+            || context.MimeType.StartsWith("image/gif", StringComparison.OrdinalIgnoreCase);
     }
 
     private IReadOnlyList<ClassificationResult> ParseResponse(
