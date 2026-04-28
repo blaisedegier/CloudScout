@@ -99,7 +99,7 @@ public sealed class RtfTextExtractor : ITextExtractor
                             case '\\': sb.Append('\\'); break;
                             case '{': sb.Append('{'); break;
                             case '}': sb.Append('}'); break;
-                            // Other symbols (\~ nbsp, \- optional hyphen, etc.) are dropped
+                                // Other symbols (\~ nbsp, \- optional hyphen, etc.) are dropped
                         }
                     }
                 }

@@ -62,12 +62,25 @@ public static class ResultsCommand
             return 2;
         }
 
+        // Aggregate ChangeStatus counts so the user can see at a glance how much of this scan
+        // was reused from the prior session — high "Unchanged" means delta is doing its job.
+        var statusCounts = await db.CrawledFiles
+            .Where(f => f.SessionId == session.Id)
+            .GroupBy(f => f.ChangeStatus)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Status, x => x.Count, ct);
+
+        var newCount = statusCounts.GetValueOrDefault(ChangeStatusValues.New);
+        var modifiedCount = statusCounts.GetValueOrDefault(ChangeStatusValues.Modified);
+        var unchangedCount = statusCounts.GetValueOrDefault(ChangeStatusValues.Unchanged);
+
         Console.WriteLine($"Session {session.Id} — {session.Status}");
         Console.WriteLine($"Taxonomy:   {session.TaxonomyName}");
         Console.WriteLine($"Started:    {session.StartedUtc:u}");
         if (session.CompletedUtc is { } done) Console.WriteLine($"Completed:  {done:u}");
         Console.WriteLine($"Files:      {session.TotalFilesFound}");
         Console.WriteLine($"Classified: {session.ClassifiedCount}");
+        Console.WriteLine($"Changes:    New: {newCount} · Modified: {modifiedCount} · Unchanged: {unchangedCount}");
         Console.WriteLine();
 
         // Resolve taxonomy so we can render friendly category names instead of raw ids.
