@@ -18,13 +18,16 @@ CloudScout classifies files through three tiers, each progressively more expensi
 
 Modern office formats are read natively so classification happens on real content, not filename guesses. Tier 3 is the fallback for ambiguous cases — not the workhorse.
 
-| Format family             | Extensions                                  | Library                                  |
-| ------------------------- | ------------------------------------------- | ---------------------------------------- |
-| PDF                       | `.pdf`                                      | PdfPig                                   |
-| Microsoft Office (modern) | `.docx`, `.xlsx`, `.xlsm`, `.pptx`, `.pptm` | DocumentFormat.OpenXml                   |
-| OpenDocument              | `.odt`, `.ods`, `.odp`                      | System.IO.Compression + System.Xml (BCL) |
-| Rich Text                 | `.rtf`                                      | Custom parser (no dependency)            |
-| Plain text                | `.txt`, `.csv`, `.md`, `.log`               | StreamReader                             |
+| Format family             | Extensions                                  | Tier             | Library                                  |
+| ------------------------- | ------------------------------------------- | ---------------- | ---------------------------------------- |
+| PDF                       | `.pdf`                                      | Tier 1           | PdfPig                                   |
+| Microsoft Office (modern) | `.docx`, `.xlsx`, `.xlsm`, `.pptx`, `.pptm` | Tier 1           | DocumentFormat.OpenXml                   |
+| OpenDocument              | `.odt`, `.ods`, `.odp`                      | Tier 1           | System.IO.Compression + System.Xml (BCL) |
+| Rich Text                 | `.rtf`                                      | Tier 1           | Custom parser (no dependency)            |
+| Plain text                | `.txt`, `.csv`, `.md`, `.log`               | Tier 1           | StreamReader                             |
+| Images                    | `.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`    | Tier 3 (vision)  | Gemma 4 multimodal projector             |
+
+Image classification requires a multimodal projector loaded into llama-server (`Llm:MmprojPath` in your config). Without it, image bytes still get sent to the model but the projector isn't available, so classification falls back to filename + folder metadata only.
 
 Legacy binary formats (`.doc`, `.xls`, `.ppt`) fall through to Tier 3 — the .NET ecosystem has no clean permissive-licensed reader for them on modern runtimes.
 
