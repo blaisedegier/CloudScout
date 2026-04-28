@@ -16,6 +16,7 @@ internal sealed class CrawledFileConfiguration : IEntityTypeConfiguration<Crawle
         builder.Property(x => x.FileName).HasMaxLength(500).IsRequired();
         builder.Property(x => x.ParentFolderPath).HasMaxLength(2000).IsRequired();
         builder.Property(x => x.MimeType).HasMaxLength(200);
+        builder.Property(x => x.ChangeStatus).HasMaxLength(20).IsRequired();
 
         builder.HasOne(x => x.Session)
             .WithMany(s => s.Files)

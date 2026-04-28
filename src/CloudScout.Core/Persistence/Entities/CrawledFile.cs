@@ -31,6 +31,25 @@ public class CrawledFile
 
     public DateTime DiscoveredUtc { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// Whether this file is new, modified, or unchanged relative to the most recent prior
+    /// completed scan session for the same connection. Drives the delta optimisation: unchanged
+    /// files reuse the prior session's classification suggestions instead of re-running tiers.
+    /// </summary>
+    public string ChangeStatus { get; set; } = ChangeStatusValues.New;
+
     // Navigation
     public ICollection<FileSuggestion> Suggestions { get; set; } = new List<FileSuggestion>();
+}
+
+/// <summary>
+/// String constants for the <see cref="CrawledFile.ChangeStatus"/> column. Strings rather than
+/// an enum so the wire format and DB representation are self-describing on inspection.
+/// Named with a <c>Values</c> suffix to avoid namespace collision with the property.
+/// </summary>
+public static class ChangeStatusValues
+{
+    public const string New = "New";
+    public const string Modified = "Modified";
+    public const string Unchanged = "Unchanged";
 }
