@@ -48,7 +48,7 @@ public sealed class Tier3LlmClassifier : IClassificationTier
         string raw;
         try
         {
-            raw = await _inference.GenerateAsync(prompt, cancellationToken).ConfigureAwait(false);
+            raw = await _inference.GenerateAsync(prompt, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
