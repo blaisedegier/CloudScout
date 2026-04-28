@@ -80,10 +80,16 @@ public sealed class ScanOrchestrator
 
         var session = await GetOrCreateSessionAsync(connection, taxonomyName, cancellationToken);
 
+        // Load the most recent completed session's files into a (ExternalFileId → snapshot) map.
+        // Unchanged files (same ExternalFileId + ModifiedUtc) reuse the prior session's
+        // suggestions instead of re-running the classification pipeline. First-ever scans see
+        // an empty map and treat everything as New.
+        var priorMap = await LoadPriorSnapshotAsync(connection, session, cancellationToken);
+
         try
         {
-            await CrawlAndPersistAsync(provider, session, connection, onProgress, cancellationToken);
-            await ClassifyCrawledFilesAsync(provider, session, connection, taxonomy, onProgress, cancellationToken);
+            await CrawlAndPersistAsync(provider, session, connection, priorMap, onProgress, cancellationToken);
+            await ClassifyCrawledFilesAsync(provider, session, connection, taxonomy, priorMap, onProgress, cancellationToken);
 
             session.Status = ScanStatus.Completed;
             session.CompletedUtc = DateTime.UtcNow;
@@ -113,6 +119,60 @@ public sealed class ScanOrchestrator
 
         return session;
     }
+
+    // ---- Delta lookup ------------------------------------------------------------------------
+
+    /// <summary>
+    /// Builds a map of (ExternalFileId → snapshot) from the most recent completed scan session
+    /// for this connection. Used by the crawl phase to determine ChangeStatus and by the
+    /// classify phase to copy suggestions for unchanged files. Excludes the current session
+    /// (which is still running) and any prior Failed/Cancelled sessions whose results may be
+    /// incomplete.
+    /// </summary>
+    private async Task<IReadOnlyDictionary<string, PriorFileSnapshot>> LoadPriorSnapshotAsync(
+        CloudConnection connection,
+        ScanSession currentSession,
+        CancellationToken ct)
+    {
+        var prior = await _db.ScanSessions
+            .Where(s => s.ConnectionId == connection.Id
+                        && s.Id != currentSession.Id
+                        && s.Status == ScanStatus.Completed)
+            .OrderByDescending(s => s.CompletedUtc)
+            .FirstOrDefaultAsync(ct);
+
+        if (prior is null)
+            return new Dictionary<string, PriorFileSnapshot>(0);
+
+        // AsNoTracking — we only read these rows; tracking them would interfere with the new
+        // session's writes. Suggestions are loaded eagerly so the classify phase can clone
+        // them without a second round-trip per file.
+        var rows = await _db.CrawledFiles
+            .AsNoTracking()
+            .Where(f => f.SessionId == prior.Id)
+            .Include(f => f.Suggestions)
+            .ToListAsync(ct);
+
+        var map = new Dictionary<string, PriorFileSnapshot>(rows.Count, StringComparer.Ordinal);
+        foreach (var row in rows)
+        {
+            // Provider IDs are unique within a drive, but a defensive check guards against
+            // any historic dupes (e.g. resumed-then-completed sessions before this code existed).
+            map[row.ExternalFileId] = new PriorFileSnapshot(row.ModifiedUtc, row.Suggestions.ToList());
+        }
+
+        _logger.LogInformation("Loaded {Count} files from prior completed session {PriorId} for delta comparison",
+            map.Count, prior.Id);
+        return map;
+    }
+
+    /// <summary>
+    /// Snapshot of a file from a prior session, used to decide whether the current scan can
+    /// reuse its classification. <see cref="Suggestions"/> is the list of FileSuggestion rows
+    /// from the prior CrawledFile — cloned (not tracked) so we can safely create new rows
+    /// referencing the new session's CrawledFile id.
+    /// </summary>
+    private sealed record PriorFileSnapshot(DateTime? ModifiedUtc, IReadOnlyList<FileSuggestion> Suggestions);
 
     // ---- Phase 1: Crawl ----------------------------------------------------------------------
 
@@ -148,6 +208,7 @@ public sealed class ScanOrchestrator
         ICloudStorageProvider provider,
         ScanSession session,
         CloudConnection connection,
+        IReadOnlyDictionary<string, PriorFileSnapshot> priorMap,
         Func<ScanProgress, Task>? onProgress,
         CancellationToken ct)
     {
@@ -156,6 +217,17 @@ public sealed class ScanOrchestrator
         await foreach (var file in provider.EnumerateFilesAsync(connection.HomeAccountId, session.LastProcessedExternalPath, ct)
                                            .ConfigureAwait(false))
         {
+            // Compare against the prior session by stable ExternalFileId. Same id + same
+            // ModifiedUtc → Unchanged (reuse classifications). Same id + different time →
+            // Modified (re-classify). Not in prior → New.
+            var changeStatus = ChangeStatusValues.New;
+            if (priorMap.TryGetValue(file.ExternalFileId, out var prior))
+            {
+                changeStatus = prior.ModifiedUtc == file.ModifiedUtc
+                    ? ChangeStatusValues.Unchanged
+                    : ChangeStatusValues.Modified;
+            }
+
             batch.Add(new CrawledFile
             {
                 SessionId = session.Id,
@@ -167,6 +239,7 @@ public sealed class ScanOrchestrator
                 SizeBytes = file.SizeBytes,
                 CreatedUtc = file.CreatedUtc,
                 ModifiedUtc = file.ModifiedUtc,
+                ChangeStatus = changeStatus,
             });
 
             session.TotalFilesFound++;
@@ -202,6 +275,7 @@ public sealed class ScanOrchestrator
         ScanSession session,
         CloudConnection connection,
         TaxonomyDefinition taxonomy,
+        IReadOnlyDictionary<string, PriorFileSnapshot> priorMap,
         Func<ScanProgress, Task>? onProgress,
         CancellationToken ct)
     {
@@ -215,12 +289,47 @@ public sealed class ScanOrchestrator
 
         if (filesToClassify.Count == 0) return;
 
-        _logger.LogInformation("Classifying {Count} files for scan {SessionId}", filesToClassify.Count, session.Id);
+        var unchangedCount = filesToClassify.Count(f => f.ChangeStatus == ChangeStatusValues.Unchanged);
+        var toRunCount = filesToClassify.Count - unchangedCount;
+        _logger.LogInformation(
+            "Classifying {ToRun} files for scan {SessionId} ({Unchanged} reused from prior session)",
+            toRunCount, session.Id, unchangedCount);
 
         var processedSinceFlush = 0;
         foreach (var file in filesToClassify)
         {
             ct.ThrowIfCancellationRequested();
+
+            // Unchanged files: clone prior suggestions onto the new CrawledFile row instead of
+            // running the pipeline. Cheap, deterministic, and keeps results queries unchanged.
+            if (file.ChangeStatus == ChangeStatusValues.Unchanged &&
+                priorMap.TryGetValue(file.ExternalFileId, out var prior) &&
+                prior.Suggestions.Count > 0)
+            {
+                foreach (var prev in prior.Suggestions)
+                {
+                    _db.FileSuggestions.Add(new FileSuggestion
+                    {
+                        FileId = file.Id,
+                        SuggestedCategoryId = prev.SuggestedCategoryId,
+                        ConfidenceScore = prev.ConfidenceScore,
+                        ClassificationTier = prev.ClassificationTier,
+                        ClassificationReason = prev.ClassificationReason,
+                        UserStatus = prev.UserStatus,
+                    });
+                }
+
+                session.ClassifiedCount++;
+                processedSinceFlush++;
+
+                if (processedSinceFlush >= ClassifyPersistEveryNFiles)
+                {
+                    await _db.SaveChangesAsync(ct);
+                    processedSinceFlush = 0;
+                    await ReportProgressAsync(onProgress, session, file.ExternalPath, ScanPhase.Classifying);
+                }
+                continue;
+            }
 
             var candidates = await ClassifyFileAsync(provider, connection, file, taxonomy, ct);
 
