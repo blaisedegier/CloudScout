@@ -1,5 +1,3 @@
-using global::Dropbox.Api;
-using global::Dropbox.Api.Files;
 using Microsoft.Extensions.Logging;
 using System.Runtime.CompilerServices;
 

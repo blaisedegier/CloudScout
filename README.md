@@ -18,14 +18,14 @@ CloudScout classifies files through three tiers, each progressively more expensi
 
 Modern office formats are read natively so classification happens on real content, not filename guesses. Tier 3 is the fallback for ambiguous cases — not the workhorse.
 
-| Format family             | Extensions                                  | Tier             | Library                                  |
-| ------------------------- | ------------------------------------------- | ---------------- | ---------------------------------------- |
-| PDF                       | `.pdf`                                      | Tier 1           | PdfPig                                   |
-| Microsoft Office (modern) | `.docx`, `.xlsx`, `.xlsm`, `.pptx`, `.pptm` | Tier 1           | DocumentFormat.OpenXml                   |
-| OpenDocument              | `.odt`, `.ods`, `.odp`                      | Tier 1           | System.IO.Compression + System.Xml (BCL) |
-| Rich Text                 | `.rtf`                                      | Tier 1           | Custom parser (no dependency)            |
-| Plain text                | `.txt`, `.csv`, `.md`, `.log`               | Tier 1           | StreamReader                             |
-| Images                    | `.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`    | Tier 3 (vision)  | Gemma 4 multimodal projector             |
+| Format family             | Extensions                                  | Tier            | Library                                  |
+| ------------------------- | ------------------------------------------- | --------------- | ---------------------------------------- |
+| PDF                       | `.pdf`                                      | Tier 1          | PdfPig                                   |
+| Microsoft Office (modern) | `.docx`, `.xlsx`, `.xlsm`, `.pptx`, `.pptm` | Tier 1          | DocumentFormat.OpenXml                   |
+| OpenDocument              | `.odt`, `.ods`, `.odp`                      | Tier 1          | System.IO.Compression + System.Xml (BCL) |
+| Rich Text                 | `.rtf`                                      | Tier 1          | Custom parser (no dependency)            |
+| Plain text                | `.txt`, `.csv`, `.md`, `.log`               | Tier 1          | StreamReader                             |
+| Images                    | `.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`    | Tier 3 (vision) | Gemma 4 multimodal projector             |
 
 Image classification requires a multimodal projector loaded into llama-server (`Llm:MmprojPath` in your config). Without it, image bytes still get sent to the model but the projector isn't available, so classification falls back to filename + folder metadata only.
 
@@ -63,8 +63,8 @@ cloudscout results             # Review suggestions grouped by category
 ## Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download) (10.0.201+)
-- A Microsoft account with files in OneDrive
-- Access to [portal.azure.com](https://portal.azure.com) (free tier is sufficient)
+- At least one personal cloud account: OneDrive, Google Drive, or Dropbox (see [Limitations](#limitations))
+- Access to the relevant developer console for the provider(s) you want to use (all free): [portal.azure.com](https://portal.azure.com), [console.cloud.google.com](https://console.cloud.google.com), or [dropbox.com/developers/apps](https://www.dropbox.com/developers/apps)
 - **For Tier 3 (optional but recommended):** a Gemma 4 E2B GGUF model file + llama-server binary
 
 ## Quick Start
@@ -77,7 +77,15 @@ cd CloudScout
 dotnet build
 ```
 
-### 2. Register an Azure app (for OneDrive access)
+### 2. Register an app with your chosen provider
+
+You need a developer-console app registration for **each** provider you want to use. They're independent — pick one and ignore the others if you only want a single provider.
+
+- **OneDrive** → follow the steps below (Azure portal)
+- **Google Drive** → skip ahead to [Additional Provider Setup > Google Drive](#google-drive), then return to step 3
+- **Dropbox** → skip ahead to [Additional Provider Setup > Dropbox](#dropbox), then return to step 3
+
+#### OneDrive (Microsoft Entra ID)
 
 CloudScout needs an Entra ID (Azure AD) app registration so Microsoft will allow it to read your OneDrive files. This is free.
 
@@ -102,25 +110,34 @@ CloudScout needs an Entra ID (Azure AD) app registration so Microsoft will allow
 cp src/CloudScout.Cli/appsettings.Local.json.example src/CloudScout.Cli/appsettings.Local.json
 ```
 
-Edit `appsettings.Local.json` and paste your Application (client) ID:
+Edit `appsettings.Local.json` and fill in **only the provider section(s) you registered in step 2**. Leave the others as empty strings — providers with empty config are silently skipped at startup.
 
 ```json
 {
   "Authentication": {
-    "Microsoft": {
-      "ClientId": "YOUR-APPLICATION-CLIENT-ID"
-    }
+    "Microsoft": { "ClientId": "YOUR-APPLICATION-CLIENT-ID" },
+    "Google": {
+      "ClientId": "...apps.googleusercontent.com",
+      "ClientSecret": "..."
+    },
+    "Dropbox": { "AppKey": "..." }
   }
 }
 ```
 
-### 4. Connect your OneDrive
+### 4. Connect a cloud provider
+
+CloudScout supports OneDrive, Google Drive, and Dropbox. Pick whichever you have files in:
 
 ```bash
-cloudscout connect onedrive
+cloudscout connect onedrive       # device-code flow — paste the URL + code in your browser
+cloudscout connect googledrive    # opens the system browser, captures the redirect on localhost
+cloudscout connect dropbox        # opens the system browser, PKCE flow
 ```
 
-A device-code prompt will appear — open the URL in your browser, enter the code, and sign in. Control returns to the CLI once authentication completes.
+You can connect multiple providers; each one ends up as a separate `CloudConnection` row and is scanned independently.
+
+For Google Drive and Dropbox you'll first need to register an app in their respective consoles — see [Additional Provider Setup](#additional-provider-setup-google-drive--dropbox) below.
 
 ### 5. Scan and review
 
@@ -168,6 +185,58 @@ cloudscout scan
 ```
 
 CloudScout auto-launches llama-server when Tier 3 is needed, waits for it to load the model, runs inference, and shuts the server down on exit. No separate terminal required.
+
+## Additional Provider Setup (Google Drive / Dropbox)
+
+Both flows take ~5–10 minutes and produce the values you paste into `appsettings.Local.json`.
+
+### Google Drive
+
+1. Open **[console.cloud.google.com](https://console.cloud.google.com)** and create (or select) a project
+2. **APIs & Services > Library** > enable **Google Drive API**
+3. **APIs & Services > OAuth consent screen** > **External** > fill in app name + support email > add the scope `https://www.googleapis.com/auth/drive.readonly` > add your own email as a **Test user**
+4. **APIs & Services > Credentials > Create credentials > OAuth client ID** > Application type **Desktop app** > name "CloudScout"
+5. Copy the **Client ID** and **Client secret** into `appsettings.Local.json`:
+
+   ```json
+   {
+     "Authentication": {
+       "Google": {
+         "ClientId": "...apps.googleusercontent.com",
+         "ClientSecret": "..."
+       }
+     }
+   }
+   ```
+
+   > **Note:** Per Google's own docs, OAuth client secrets for installed/desktop apps are not truly confidential — they're identifiers paired with the client ID. They still belong in the gitignored local config, never in committed files.
+
+6. Run `cloudscout connect googledrive` — your browser opens, you consent, control returns to the CLI.
+
+### Dropbox
+
+1. Open **[dropbox.com/developers/apps](https://www.dropbox.com/developers/apps)** and click **Create app**
+2. **API:** _Scoped access_ · **Type:** _Full Dropbox_ (or _App folder_ for tighter scope) · **Name:** something globally unique like `CloudScout-<your-handle>`
+3. On the app's **Permissions** tab, check `files.metadata.read` and `files.content.read`, then **Submit**
+4. On the **Settings** tab, copy the **App key** (no secret needed — PKCE replaces it):
+
+   ```json
+   {
+     "Authentication": {
+       "Dropbox": {
+         "AppKey": "..."
+       }
+     }
+   }
+   ```
+
+5. Run `cloudscout connect dropbox` — your browser opens, you consent, control returns to the CLI.
+
+## Limitations
+
+CloudScout is designed for **personal cloud accounts**. Work, school, and other organisation-controlled accounts will likely fail to authenticate with an "admin approval required" message — Microsoft, Google, and Dropbox all enforce administrator consent for unverified third-party apps in enterprise tenants. This isn't a CloudScout bug; it's how the providers gate access. App "verification" with each provider is a multi-month commercial-publisher process and would not lift the restriction in tenants whose policy requires admin consent for _all_ third-party apps (which most do).
+
+For the same reason **SharePoint is not supported** — it has no personal-account variant, so every SharePoint user is in some org's tenant. The OneDrive, Google Drive, and Dropbox providers are expected to work cleanly only against personal accounts (e.g. `outlook.com`, `gmail.com`, personal Dropbox).
 
 ## Custom Taxonomies
 
@@ -219,14 +288,14 @@ CloudScout/
   src/
     CloudScout.Core/           Core engine library (no I/O framework dependency)
       Classification/          Tiered pipeline, extractors, classifiers
-      Crawling/                ICloudStorageProvider + OneDrive implementation
+      Crawling/                ICloudStorageProvider + OneDrive / GoogleDrive / Dropbox implementations
       Inference/               LLM server manager + HTTP inference client
       Persistence/             EF Core + SQLite (entities, migrations)
       Services/                Scan orchestrator
       Taxonomy/                JSON taxonomy model, loader, embedded defaults
     CloudScout.Cli/            CLI entry point (System.CommandLine)
   tests/
-    CloudScout.Core.Tests/     58 unit tests (taxonomy, Tier 0, Tier 1, extractors)
+    CloudScout.Core.Tests/     74 unit tests (taxonomy, tiers, extractors, delta, providers)
   models/                      (gitignored) GGUF model files
   tools/                       (gitignored) llama-server binary + DLLs
   cloudscout                   Shell wrapper (macOS/Linux)
@@ -235,39 +304,46 @@ CloudScout/
 
 ## Tech Stack
 
-| Component                          | Choice                                     | License             |
-| ---------------------------------- | ------------------------------------------ | ------------------- |
-| Runtime                            | .NET 10 LTS                                | MIT                 |
-| Cloud API                          | Microsoft.Graph SDK                        | MIT                 |
-| OAuth                              | Microsoft.Identity.Client (MSAL)           | MIT                 |
-| PDF extraction                     | PdfPig                                     | Apache 2.0          |
-| Office extraction (docx/xlsx/pptx) | DocumentFormat.OpenXml                     | MIT                 |
-| OpenDocument / RTF extraction      | BCL (System.IO.Compression, custom parser) | MIT                 |
-| LLM model                          | Gemma 4 E2B                                | Apache 2.0          |
-| LLM server                         | llama-server (llama.cpp)                   | MIT                 |
-| Local storage                      | SQLite via EF Core                         | MIT / Public Domain |
-| CLI framework                      | System.CommandLine                         | MIT                 |
+| Component                          | Choice                                                 | License             |
+| ---------------------------------- | ------------------------------------------------------ | ------------------- |
+| Runtime                            | .NET 10 LTS                                            | MIT                 |
+| OneDrive API + OAuth               | Microsoft.Graph SDK + Microsoft.Identity.Client (MSAL) | MIT                 |
+| Google Drive API + OAuth           | Google.Apis.Drive.v3 + Google.Apis.Auth                | Apache 2.0          |
+| Dropbox API + OAuth                | Dropbox.Api (PKCE flow)                                | MIT                 |
+| PDF extraction                     | PdfPig                                                 | Apache 2.0          |
+| Office extraction (docx/xlsx/pptx) | DocumentFormat.OpenXml                                 | MIT                 |
+| OpenDocument / RTF extraction      | BCL (System.IO.Compression, custom parser)             | MIT                 |
+| LLM model                          | Gemma 4 E2B                                            | Apache 2.0          |
+| LLM server                         | llama-server (llama.cpp)                               | MIT                 |
+| Local storage                      | SQLite via EF Core                                     | MIT / Public Domain |
+| CLI framework                      | System.CommandLine                                     | MIT                 |
 
 All dependencies are MIT or Apache 2.0 licensed. No proprietary, commercial, or restrictively licensed components.
 
 ## Troubleshooting
 
-| Symptom                                     | Cause                                                         | Fix                                                                    |
-| ------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `Missing Authentication:Microsoft:ClientId` | appsettings.Local.json not created or ClientId empty          | Copy the `.example` file and fill in your app registration ID          |
-| `AADSTS7000218` during login                | Public client flows not enabled                               | App registration > Authentication > Allow public client flows > Yes    |
-| `AADSTS65001` consent error                 | Missing Graph permissions                                     | Add `Files.Read`, `User.Read`, `offline_access` delegated permissions  |
-| `No cached MSAL account`                    | Token cache was cleared                                       | Re-run `cloudscout connect onedrive`                                   |
-| Tier 3 skipped (no errors)                  | `Llm:ServerUrl` is empty or `Llm:ModelPath` not set           | Add the Llm section to appsettings.Local.json                          |
-| `llama-server executable not found`         | Binary not in `tools/`                                        | Extract llama.cpp release into `tools/` directory                      |
-| Tier 3 returns empty results                | Model generates thinking tokens that exhaust the token budget | Increase `Llm:MaxGenerationTokens` (default 2048 should be sufficient) |
+| Symptom                                                                                | Cause                                                                                    | Fix                                                                                                                                                                                                              |
+| -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Missing Authentication:Microsoft:ClientId`                                            | appsettings.Local.json not created or ClientId empty                                     | Copy the `.example` file and fill in your app registration ID                                                                                                                                                    |
+| `AADSTS7000218` during login                                                           | Public client flows not enabled                                                          | App registration > Authentication > Allow public client flows > Yes                                                                                                                                              |
+| `AADSTS65001` consent error                                                            | Missing Graph permissions                                                                | Add `Files.Read`, `User.Read`, `offline_access` delegated permissions                                                                                                                                            |
+| `No cached MSAL account`                                                               | Token cache was cleared                                                                  | Re-run `cloudscout connect onedrive`                                                                                                                                                                             |
+| Tier 3 skipped (no errors)                                                             | `Llm:ServerUrl` is empty or `Llm:ModelPath` not set                                      | Add the Llm section to appsettings.Local.json                                                                                                                                                                    |
+| `llama-server executable not found`                                                    | Binary not in `tools/`                                                                   | Extract llama.cpp release into `tools/` directory                                                                                                                                                                |
+| Tier 3 returns empty results                                                           | Model generates thinking tokens that exhaust the token budget                            | Increase `Llm:MaxGenerationTokens` (default 2048 should be sufficient)                                                                                                                                           |
+| `Missing Authentication:Google:ClientId/ClientSecret`                                  | appsettings.Local.json missing the Google section                                        | Fill in both `ClientId` and `ClientSecret` from Google Cloud Console (see Additional Provider Setup)                                                                                                             |
+| Google consent screen says "App not verified"                                          | OAuth consent screen is in test mode (expected)                                          | Click _Advanced_ > _Go to CloudScout (unsafe)_ — the warning is normal for unverified personal-use apps. Make sure your email is added as a Test user.                                                           |
+| Google: `Error 403: access_denied` "has not completed the Google verification process" | Account isn't on the test-users allow-list while the app is in Testing publishing status | Google Cloud Console > **APIs & Services > OAuth consent screen** > **Test users** > **+ Add users** > add the Gmail you're connecting with > Save. Up to 100 testers allowed; no need to publish to Production. |
+| Google: "access_denied" or "admin approval required"                                   | Trying to use a work/school Google account                                               | Use a personal Google account (gmail.com). See [Limitations](#limitations).                                                                                                                                      |
+| `Missing Authentication:Dropbox:AppKey`                                                | appsettings.Local.json missing the Dropbox section                                       | Fill in `AppKey` from your Dropbox app's Settings tab                                                                                                                                                            |
+| Dropbox: browser opens but redirect fails                                              | Loopback port range blocked / occupied                                                   | Adjust `Authentication:Dropbox:LoopbackPortStart`/`LoopbackPortEnd` in config to a free range                                                                                                                    |
+| Dropbox: "missing scope" error during scan                                             | App permissions not submitted on Dropbox console                                         | Permissions tab > tick `files.metadata.read` + `files.content.read` > **Submit** > re-run `connect dropbox`                                                                                                      |
 
 ## Roadmap
 
-- [ ] Google Drive provider (`ICloudStorageProvider` abstraction is already in place)
-- [ ] `.doc` binary format extraction (NPOI or similar)
-- [ ] Gemma 4 vision — feed scanned/image documents directly to the LLM
-- [ ] Scan history comparison (detect new/changed files across runs)
+- [x] Gemma 4 vision — feed scanned/image documents directly to the LLM
+- [x] Scan delta — detect new/modified/unchanged files across runs and skip re-classification
+- [x] Google Drive + Dropbox providers
 - [ ] Export suggestions to CSV/JSON for import into other systems
 
 ## License
