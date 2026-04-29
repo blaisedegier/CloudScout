@@ -2,8 +2,7 @@
   "_comment": "Copy this file to appsettings.Local.json (which is gitignored) and fill in your values. See the README for the full walkthrough.",
   "Authentication": {
     "Microsoft": {
-      "ClientId": "YOUR-APPLICATION-CLIENT-ID-HERE",
-      "TenantId": "common"
+      "ClientId": "YOUR-APPLICATION-CLIENT-ID-HERE"
     },
     "Google": {
       "ClientId": "YOUR-GOOGLE-OAUTH-CLIENT-ID.apps.googleusercontent.com",
