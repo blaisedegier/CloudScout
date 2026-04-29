@@ -135,7 +135,7 @@ public sealed class DropboxCredentialFactory
     {
         for (int port = _options.LoopbackPortStart; port <= _options.LoopbackPortEnd; port++)
         {
-            var prefix = $"http://127.0.0.1:{port}/";
+            var prefix = $"http://localhost:{port}/";
             var listener = new HttpListener();
             listener.Prefixes.Add(prefix);
             try
