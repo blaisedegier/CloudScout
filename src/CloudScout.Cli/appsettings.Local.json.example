@@ -4,6 +4,13 @@
     "Microsoft": {
       "ClientId": "YOUR-APPLICATION-CLIENT-ID-HERE",
       "TenantId": "common"
+    },
+    "Google": {
+      "ClientId": "YOUR-GOOGLE-OAUTH-CLIENT-ID.apps.googleusercontent.com",
+      "ClientSecret": "YOUR-GOOGLE-OAUTH-CLIENT-SECRET"
+    },
+    "Dropbox": {
+      "AppKey": "YOUR-DROPBOX-APP-KEY"
     }
   },
   "Llm": {

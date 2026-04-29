@@ -19,7 +19,7 @@ public static class ConnectCommand
     {
         var providerArg = new Argument<string>("provider")
         {
-            Description = "Cloud provider to connect (currently supported: onedrive)",
+            Description = "Cloud provider to connect (supported: onedrive, googledrive, dropbox)",
         };
 
         var command = new Command("connect", "Connect a cloud storage provider")
@@ -45,7 +45,7 @@ public static class ConnectCommand
 
         if (provider is null)
         {
-            Console.Error.WriteLine($"Unknown provider '{providerName}'. Supported: onedrive");
+            Console.Error.WriteLine($"Unknown provider '{providerName}'. Supported: onedrive, googledrive, dropbox");
             return 2;
         }
 
