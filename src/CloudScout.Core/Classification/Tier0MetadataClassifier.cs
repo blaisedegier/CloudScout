@@ -86,7 +86,7 @@ public sealed class Tier0MetadataClassifier : IClassificationTier
         foreach (var kw in keywords)
         {
             if (string.IsNullOrWhiteSpace(kw)) continue;
-            if (haystack.Contains(kw, StringComparison.OrdinalIgnoreCase))
+            if (KeywordMatcher.ContainsWord(haystack, kw))
                 hits.Add(kw);
         }
         return hits;
@@ -98,9 +98,9 @@ public sealed class Tier0MetadataClassifier : IClassificationTier
         foreach (var neg in negatives)
         {
             if (string.IsNullOrWhiteSpace(neg)) continue;
-            if (fileName.Contains(neg, StringComparison.OrdinalIgnoreCase)) return true;
-            if (folderPath.Contains(neg, StringComparison.OrdinalIgnoreCase)) return true;
-            if (fullPath.Contains(neg, StringComparison.OrdinalIgnoreCase)) return true;
+            if (KeywordMatcher.ContainsWord(fileName, neg)) return true;
+            if (KeywordMatcher.ContainsWord(folderPath, neg)) return true;
+            if (KeywordMatcher.ContainsWord(fullPath, neg)) return true;
         }
         return false;
     }

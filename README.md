@@ -269,15 +269,15 @@ Pass it to the scan command:
 cloudscout scan --taxonomy path/to/my-taxonomy.json
 ```
 
-| Field              | Purpose                                                            |
-| ------------------ | ------------------------------------------------------------------ |
-| `filenameKeywords` | Case-insensitive substrings matched against the file name (Tier 0) |
-| `folderKeywords`   | Matched against the parent folder path (Tier 0)                    |
-| `contentKeywords`  | Word-boundary matched against extracted text (Tier 1)              |
-| `contentPhrases`   | Multi-word phrases — higher weight than single keywords (Tier 1)   |
-| `negativeKeywords` | If found anywhere, the category is excluded for that file          |
-| `mimeTypes`        | Preferred MIME types — adds a small confidence bonus (Tier 0)      |
-| `baseConfidence`   | Maximum confidence ceiling for this category (0.0 - 1.0)           |
+| Field              | Purpose                                                                                                                                       |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `filenameKeywords` | Whole-word matched against the file name (Tier 0). Multi-word keywords like `id card` match across separators (`id_card.png`, `ID-Card.pdf`). |
+| `folderKeywords`   | Whole-word matched against the parent folder path (Tier 0)                                                                                    |
+| `contentKeywords`  | Whole-word matched against extracted text (Tier 1)                                                                                            |
+| `contentPhrases`   | Multi-word phrases — higher weight than single keywords (Tier 1)                                                                              |
+| `negativeKeywords` | If found (whole-word) anywhere, the category is excluded for that file                                                                        |
+| `mimeTypes`        | Preferred MIME types — adds a small confidence bonus (Tier 0)                                                                                 |
+| `baseConfidence`   | Maximum confidence ceiling for this category (0.0 - 1.0)                                                                                      |
 
 The Tier 3 LLM also uses the taxonomy — category IDs and display names are injected into the prompt as the valid output enum.
 

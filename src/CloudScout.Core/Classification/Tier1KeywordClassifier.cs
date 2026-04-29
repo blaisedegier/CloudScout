@@ -83,7 +83,7 @@ public sealed class Tier1KeywordClassifier : IClassificationTier
         foreach (var needle in needles)
         {
             if (string.IsNullOrWhiteSpace(needle)) continue;
-            if (ContainsWord(haystack, needle)) count++;
+            if (KeywordMatcher.ContainsWord(haystack, needle)) count++;
         }
         return count;
     }
@@ -93,28 +93,7 @@ public sealed class Tier1KeywordClassifier : IClassificationTier
         foreach (var neg in negatives)
         {
             if (string.IsNullOrWhiteSpace(neg)) continue;
-            if (ContainsWord(text, neg)) return true;
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// Case-insensitive word-boundary search for <paramref name="word"/> within <paramref name="text"/>.
-    /// Cheaper than compiling a regex per keyword and correct enough for V1 — boundaries are any
-    /// non-letter-or-digit, which handles punctuation, whitespace, and string ends naturally.
-    /// </summary>
-    internal static bool ContainsWord(string text, string word)
-    {
-        if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(word)) return false;
-
-        var idx = 0;
-        while ((idx = text.IndexOf(word, idx, StringComparison.OrdinalIgnoreCase)) >= 0)
-        {
-            var leftOk = idx == 0 || !char.IsLetterOrDigit(text[idx - 1]);
-            var rightBoundary = idx + word.Length;
-            var rightOk = rightBoundary == text.Length || !char.IsLetterOrDigit(text[rightBoundary]);
-            if (leftOk && rightOk) return true;
-            idx += word.Length;
+            if (KeywordMatcher.ContainsWord(text, neg)) return true;
         }
         return false;
     }

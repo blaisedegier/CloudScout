@@ -129,18 +129,4 @@ public class Tier1KeywordClassifierTests
             results[i - 1].ConfidenceScore.Should().BeGreaterThanOrEqualTo(results[i].ConfidenceScore);
     }
 
-    [Fact]
-    public void ContainsWord_rejects_partial_word_matches()
-    {
-        Tier1KeywordClassifier.ContainsWord("william was here", "will").Should().BeFalse();
-        Tier1KeywordClassifier.ContainsWord("misstatement of facts", "statement").Should().BeFalse();
-    }
-
-    [Fact]
-    public void ContainsWord_accepts_matches_with_punctuation_boundaries()
-    {
-        Tier1KeywordClassifier.ContainsWord("the will, signed in 2024,", "will").Should().BeTrue();
-        Tier1KeywordClassifier.ContainsWord("IBAN: GB12", "iban").Should().BeTrue();
-        Tier1KeywordClassifier.ContainsWord("(will)", "will").Should().BeTrue();
-    }
 }
