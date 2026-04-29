@@ -66,6 +66,7 @@ public sealed class ScanOrchestrator
         Guid connectionId,
         string taxonomyName,
         Func<ScanProgress, Task>? onProgress = null,
+        bool forceReclassify = false,
         CancellationToken cancellationToken = default)
     {
         var connection = await _db.CloudConnections.FirstOrDefaultAsync(c => c.Id == connectionId, cancellationToken)
@@ -84,7 +85,11 @@ public sealed class ScanOrchestrator
         // Unchanged files (same ExternalFileId + ModifiedUtc) reuse the prior session's
         // suggestions instead of re-running the classification pipeline. First-ever scans see
         // an empty map and treat everything as New.
-        var priorMap = await LoadPriorSnapshotAsync(connection, session, cancellationToken);
+        // --force skips delta reuse: every file is treated as New and reclassified from scratch.
+        // Use this after taxonomy or classifier logic changes that should invalidate prior results.
+        var priorMap = forceReclassify
+            ? (IReadOnlyDictionary<string, PriorFileSnapshot>)new Dictionary<string, PriorFileSnapshot>()
+            : await LoadPriorSnapshotAsync(connection, session, cancellationToken);
 
         try
         {

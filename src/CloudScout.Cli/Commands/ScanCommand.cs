@@ -27,23 +27,30 @@ public static class ScanCommand
             Description = "Explicit CloudConnection id to scan. Defaults to the most recently used active connection.",
         };
 
+        var forceOption = new Option<bool>("--force")
+        {
+            Description = "Reclassify every file from scratch instead of reusing prior session results. Use after taxonomy or classifier changes.",
+        };
+
         var command = new Command("scan", "Enumerate files from a connected cloud storage provider")
         {
             taxonomyOption,
             connectionIdOption,
+            forceOption,
         };
 
         command.SetAction(CommandErrorHandler.Wrap(async (parseResult, ct) =>
         {
             var taxonomy = parseResult.GetValue(taxonomyOption)!;
             var connectionId = parseResult.GetValue(connectionIdOption);
-            return await RunAsync(services, taxonomy, connectionId, ct);
+            var force = parseResult.GetValue(forceOption);
+            return await RunAsync(services, taxonomy, connectionId, force, ct);
         }));
 
         return command;
     }
 
-    private static async Task<int> RunAsync(IServiceProvider services, string taxonomy, Guid? connectionId, CancellationToken ct)
+    private static async Task<int> RunAsync(IServiceProvider services, string taxonomy, Guid? connectionId, bool force, CancellationToken ct)
     {
         await using var scope = services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<CloudScoutDbContext>();
@@ -73,6 +80,7 @@ public static class ScanCommand
                 if (progress.Phase is ScanPhase.Completed or ScanPhase.Failed) Console.WriteLine();
                 return Task.CompletedTask;
             },
+            forceReclassify: force,
             cancellationToken: ct);
 
         Console.WriteLine();

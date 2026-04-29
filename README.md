@@ -186,6 +186,12 @@ cloudscout scan
 
 CloudScout auto-launches llama-server when Tier 3 is needed, waits for it to load the model, runs inference, and shuts the server down on exit. No separate terminal required.
 
+By default, re-running `scan` reuses classifications for unchanged files from the last completed session. After taxonomy edits or classifier changes, pass `--force` to reclassify every file from scratch:
+
+```bash
+cloudscout scan --force
+```
+
 ## Additional Provider Setup (Google Drive / Dropbox)
 
 Both flows take ~5–10 minutes and produce the values you paste into `appsettings.Local.json`.
