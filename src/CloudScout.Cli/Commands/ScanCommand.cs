@@ -8,9 +8,10 @@ using System.CommandLine;
 namespace CloudScout.Cli.Commands;
 
 /// <summary>
-/// <c>cloudscout scan [--taxonomy NAME] [--connection-id GUID]</c> — runs a full crawl of
-/// the user's cloud storage through the scan orchestrator, printing progress as it goes.
-/// Defaults to the most recently connected account when no connection id is supplied.
+/// <c>cloudscout scan [--taxonomy NAME] [--connection-id GUID] [--force]</c> — crawls the
+/// user's cloud storage and classifies each file against the chosen taxonomy, printing
+/// progress as it goes. Defaults to the most recently connected account when no connection
+/// id is supplied. Use <c>--force</c> to reclassify everything from scratch.
 /// </summary>
 public static class ScanCommand
 {
@@ -18,7 +19,7 @@ public static class ScanCommand
     {
         var taxonomyOption = new Option<string>("--taxonomy")
         {
-            Description = "Taxonomy to classify against. Ignored in Phase A (crawl only).",
+            Description = "Taxonomy to classify against.",
             DefaultValueFactory = _ => "generic-default",
         };
 
@@ -32,7 +33,7 @@ public static class ScanCommand
             Description = "Reclassify every file from scratch instead of reusing prior session results. Use after taxonomy or classifier changes.",
         };
 
-        var command = new Command("scan", "Enumerate files from a connected cloud storage provider")
+        var command = new Command("scan", "Crawl and classify files from a connected cloud storage provider")
         {
             taxonomyOption,
             connectionIdOption,

@@ -1,11 +1,17 @@
 @echo off
-rem Thin wrapper around `dotnet run` so you can type `cloudscout <command>` instead of
-rem `dotnet run --project src/CloudScout.Cli -- <command>` every time. Pass-through for all args.
+rem Wrapper that publishes CloudScout.Cli once into dist\ on first run, then executes
+rem the published binary directly on subsequent runs. This avoids the ~1s MSBuild
+rem up-to-date check that `dotnet run` performs on every invocation.
 rem
-rem --no-restore skips the NuGet check on every invocation (faster); run `dotnet restore`
-rem manually or use `dotnet build` if you've just changed package references.
-rem --verbosity quiet suppresses the build summary lines so the CLI's own output comes through cleanly.
+rem To pick up source changes, delete the dist\ folder (or run: dotnet publish
+rem src\CloudScout.Cli -c Release -o dist --no-self-contained).
 setlocal
 set "SCRIPT_DIR=%~dp0"
-dotnet run --project "%SCRIPT_DIR%src\CloudScout.Cli" --no-restore --verbosity quiet -- %*
+set "EXE=%SCRIPT_DIR%dist\CloudScout.Cli.exe"
+if not exist "%EXE%" (
+    echo Publishing CloudScout.Cli ^(first-run setup^)...
+    dotnet publish "%SCRIPT_DIR%src\CloudScout.Cli" -c Release -o "%SCRIPT_DIR%dist" --no-self-contained --verbosity quiet --nologo
+    if errorlevel 1 exit /b %ERRORLEVEL%
+)
+"%EXE%" %*
 exit /b %ERRORLEVEL%
