@@ -4,7 +4,21 @@ A pluggable document classifier that connects to your cloud storage, recursively
 
 Built with .NET 10, Gemma 4 E2B, and an extensible JSON taxonomy system.
 
-## How It Works
+## 📑 Table of Contents
+
+- [⚙️ How It Works](#️-how-it-works)
+- [📋 Prerequisites](#-prerequisites)
+- [🚀 Quick Start](#-quick-start)
+- [🧠 Tier 3: Local LLM Setup (Optional)](#-tier-3-local-llm-setup-optional)
+- [🔌 Additional Provider Setup (Google Drive / Dropbox)](#-additional-provider-setup-google-drive--dropbox)
+- [⚠️ Limitations](#️-limitations)
+- [🗂️ Custom Taxonomies](#️-custom-taxonomies)
+- [📁 Project Structure](#-project-structure)
+- [🛠️ Tech Stack](#️-tech-stack)
+- [🩺 Troubleshooting](#-troubleshooting)
+- [📄 License](#-license)
+
+## ⚙️ How It Works
 
 CloudScout classifies files through three tiers, each progressively more expensive. The pipeline short-circuits as soon as confidence is high enough — most files never touch the LLM.
 
@@ -60,14 +74,14 @@ cloudscout results             # Review suggestions grouped by category
       --     /Prompts/Sceptic.txt
 ```
 
-## Prerequisites
+## 📋 Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download) (10.0.201+)
-- At least one personal cloud account: OneDrive, Google Drive, or Dropbox (see [Limitations](#limitations))
+- At least one personal cloud account: OneDrive, Google Drive, or Dropbox (see [Limitations](#️-limitations))
 - Access to the relevant developer console for the provider(s) you want to use (all free): [portal.azure.com](https://portal.azure.com), [console.cloud.google.com](https://console.cloud.google.com), or [dropbox.com/developers/apps](https://www.dropbox.com/developers/apps)
 - **For Tier 3 (optional but recommended):** a Gemma 4 E2B GGUF model file + llama-server binary
 
-## Quick Start
+## 🚀 Quick Start
 
 ### 1. Clone and build
 
@@ -137,7 +151,7 @@ cloudscout connect dropbox        # opens the system browser, PKCE flow
 
 You can connect multiple providers; each one ends up as a separate `CloudConnection` row and is scanned independently.
 
-For Google Drive and Dropbox you'll first need to register an app in their respective consoles — see [Additional Provider Setup](#additional-provider-setup-google-drive--dropbox) below.
+For Google Drive and Dropbox you'll first need to register an app in their respective consoles — see [Additional Provider Setup](#-additional-provider-setup-google-drive--dropbox) below.
 
 ### 5. Scan and review
 
@@ -148,7 +162,7 @@ cloudscout results
 
 That's it. Tier 0 and Tier 1 run without any additional setup. For Tier 3 (LLM), see the next section.
 
-## Tier 3: Local LLM Setup (Optional)
+## 🧠 Tier 3: Local LLM Setup (Optional)
 
 Tier 3 uses [Gemma 4 E2B](https://huggingface.co/ggml-org/gemma-4-E2B-it-GGUF) — a 4.6B parameter model that runs on CPU. Without it, CloudScout still works (Tier 0 + Tier 1 handle most documents); Tier 3 fills in the ambiguous cases.
 
@@ -199,7 +213,7 @@ cloudscout export results.json
 cloudscout export results.csv --session-id <guid>
 ```
 
-## Additional Provider Setup (Google Drive / Dropbox)
+## 🔌 Additional Provider Setup (Google Drive / Dropbox)
 
 Both flows take ~5–10 minutes and produce the values you paste into `appsettings.Local.json`.
 
@@ -245,13 +259,13 @@ Both flows take ~5–10 minutes and produce the values you paste into `appsettin
 
 5. Run `cloudscout connect dropbox` — your browser opens, you consent, control returns to the CLI.
 
-## Limitations
+## ⚠️ Limitations
 
 CloudScout is designed for **personal cloud accounts**. Work, school, and other organisation-controlled accounts will likely fail to authenticate with an "admin approval required" message — Microsoft, Google, and Dropbox all enforce administrator consent for unverified third-party apps in enterprise tenants. This isn't a CloudScout bug; it's how the providers gate access. App "verification" with each provider is a multi-month commercial-publisher process and would not lift the restriction in tenants whose policy requires admin consent for _all_ third-party apps (which most do).
 
 For the same reason **SharePoint is not supported** — it has no personal-account variant, so every SharePoint user is in some org's tenant. The OneDrive, Google Drive, and Dropbox providers are expected to work cleanly only against personal accounts (e.g. `outlook.com`, `gmail.com`, personal Dropbox).
 
-## Custom Taxonomies
+## 🗂️ Custom Taxonomies
 
 The default taxonomy (`generic-default`) ships as an embedded resource. To create your own, author a JSON file following this schema:
 
@@ -294,7 +308,7 @@ cloudscout scan --taxonomy path/to/my-taxonomy.json
 
 The Tier 3 LLM also uses the taxonomy — category IDs and display names are injected into the prompt as the valid output enum.
 
-## Project Structure
+## 📁 Project Structure
 
 ```text
 CloudScout/
@@ -315,7 +329,7 @@ CloudScout/
   cloudscout.cmd               Batch wrapper (Windows)
 ```
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 | Component                          | Choice                                                 | License             |
 | ---------------------------------- | ------------------------------------------------------ | ------------------- |
@@ -333,7 +347,7 @@ CloudScout/
 
 All dependencies are MIT or Apache 2.0 licensed. No proprietary, commercial, or restrictively licensed components.
 
-## Troubleshooting
+## 🩺 Troubleshooting
 
 | Symptom                                                                                | Cause                                                                                    | Fix                                                                                                                                                                                                              |
 | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -347,11 +361,11 @@ All dependencies are MIT or Apache 2.0 licensed. No proprietary, commercial, or 
 | `Missing Authentication:Google:ClientId/ClientSecret`                                  | appsettings.Local.json missing the Google section                                        | Fill in both `ClientId` and `ClientSecret` from Google Cloud Console (see Additional Provider Setup)                                                                                                             |
 | Google consent screen says "App not verified"                                          | OAuth consent screen is in test mode (expected)                                          | Click _Advanced_ > _Go to CloudScout (unsafe)_ — the warning is normal for unverified personal-use apps. Make sure your email is added as a Test user.                                                           |
 | Google: `Error 403: access_denied` "has not completed the Google verification process" | Account isn't on the test-users allow-list while the app is in Testing publishing status | Google Cloud Console > **APIs & Services > OAuth consent screen** > **Test users** > **+ Add users** > add the Gmail you're connecting with > Save. Up to 100 testers allowed; no need to publish to Production. |
-| Google: "access_denied" or "admin approval required"                                   | Trying to use a work/school Google account                                               | Use a personal Google account (gmail.com). See [Limitations](#limitations).                                                                                                                                      |
+| Google: "access_denied" or "admin approval required"                                   | Trying to use a work/school Google account                                               | Use a personal Google account (gmail.com). See [Limitations](#️-limitations)(#limitations).                                                                                                                       |
 | `Missing Authentication:Dropbox:AppKey`                                                | appsettings.Local.json missing the Dropbox section                                       | Fill in `AppKey` from your Dropbox app's Settings tab                                                                                                                                                            |
 | Dropbox: browser opens but redirect fails                                              | Loopback port range blocked / occupied                                                   | Adjust `Authentication:Dropbox:LoopbackPortStart`/`LoopbackPortEnd` in config to a free range                                                                                                                    |
 | Dropbox: "missing scope" error during scan                                             | App permissions not submitted on Dropbox console                                         | Permissions tab > tick `files.metadata.read` + `files.content.read` > **Submit** > re-run `connect dropbox`                                                                                                      |
 
-## License
+## 📄 License
 
 MIT — see [LICENSE](LICENSE).
