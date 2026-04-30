@@ -86,7 +86,7 @@ cloudscout results             # Review suggestions grouped by category
 ### 1. Clone and build
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/CloudScout.git
+git clone https://github.com/blaisedegier/CloudScout.git
 cd CloudScout
 dotnet build
 ```
