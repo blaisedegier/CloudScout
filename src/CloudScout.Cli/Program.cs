@@ -61,6 +61,7 @@ try
         ConnectCommand.Build(host.Services),
         ScanCommand.Build(host.Services),
         ResultsCommand.Build(host.Services),
+        ExportCommand.Build(host.Services),
     };
 
     // Per-command actions wrap themselves with CommandErrorHandler; we just invoke.

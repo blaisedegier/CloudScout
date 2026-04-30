@@ -192,6 +192,13 @@ By default, re-running `scan` reuses classifications for unchanged files from th
 cloudscout scan --force
 ```
 
+To export results for import into another tool, run `cloudscout export <path>` after a scan. Format is inferred from the file extension (`.json` or `.csv`):
+
+```bash
+cloudscout export results.json
+cloudscout export results.csv --session-id <guid>
+```
+
 ## Additional Provider Setup (Google Drive / Dropbox)
 
 Both flows take ~5–10 minutes and produce the values you paste into `appsettings.Local.json`.
@@ -344,13 +351,6 @@ All dependencies are MIT or Apache 2.0 licensed. No proprietary, commercial, or 
 | `Missing Authentication:Dropbox:AppKey`                                                | appsettings.Local.json missing the Dropbox section                                       | Fill in `AppKey` from your Dropbox app's Settings tab                                                                                                                                                            |
 | Dropbox: browser opens but redirect fails                                              | Loopback port range blocked / occupied                                                   | Adjust `Authentication:Dropbox:LoopbackPortStart`/`LoopbackPortEnd` in config to a free range                                                                                                                    |
 | Dropbox: "missing scope" error during scan                                             | App permissions not submitted on Dropbox console                                         | Permissions tab > tick `files.metadata.read` + `files.content.read` > **Submit** > re-run `connect dropbox`                                                                                                      |
-
-## Roadmap
-
-- [x] Gemma 4 vision — feed scanned/image documents directly to the LLM
-- [x] Scan delta — detect new/modified/unchanged files across runs and skip re-classification
-- [x] Google Drive + Dropbox providers
-- [ ] Export suggestions to CSV/JSON for import into other systems
 
 ## License
 
